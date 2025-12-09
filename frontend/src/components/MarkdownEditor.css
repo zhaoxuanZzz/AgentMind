@@ -1,0 +1,260 @@
+.markdown-editor-wrapper {
+  border: 1px solid var(--agent-glass-border);
+  border-radius: 6px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.markdown-toolbar {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid var(--agent-glass-border);
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.toolbar-btn {
+  padding: 4px 8px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s;
+  color: var(--agent-text-secondary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.toolbar-btn:hover {
+  background: rgba(0, 240, 255, 0.1);
+  color: var(--agent-primary-color);
+  text-shadow: 0 0 5px rgba(0, 240, 255, 0.5);
+}
+
+.toolbar-btn:active {
+  background: rgba(0, 240, 255, 0.2);
+}
+
+.markdown-editor-container {
+  display: flex;
+  gap: 0;
+  overflow: hidden;
+  min-height: 400px;
+  background: transparent;
+}
+
+.markdown-editor-left {
+  flex: 1;
+  border-right: 1px solid var(--agent-glass-border);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.markdown-textarea {
+  border: none;
+  resize: none;
+  padding: 12px;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
+  font-size: 14px;
+  line-height: 1.6;
+  background: transparent;
+  color: var(--agent-text-color);
+  flex: 1;
+}
+
+.markdown-textarea:focus {
+  border: none;
+  box-shadow: none;
+  outline: none;
+}
+
+.markdown-textarea::placeholder {
+  color: rgba(148, 163, 184, 0.5);
+}
+
+.markdown-editor-right {
+  flex: 1;
+  overflow-y: auto;
+  background: rgba(0, 0, 0, 0.1);
+  padding: 16px;
+  min-width: 0;
+  max-height: 600px;
+}
+
+.markdown-preview {
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--agent-text-color);
+}
+
+.markdown-preview-empty {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--agent-text-secondary);
+}
+
+.markdown-preview h1,
+.markdown-preview h2,
+.markdown-preview h3,
+.markdown-preview h4,
+.markdown-preview h5,
+.markdown-preview h6 {
+  margin-top: 24px;
+  margin-bottom: 16px;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--agent-primary-color);
+}
+
+.markdown-preview h1 {
+  font-size: 2em;
+  border-bottom: 1px solid var(--agent-glass-border);
+  padding-bottom: 0.3em;
+}
+
+.markdown-preview h2 {
+  font-size: 1.5em;
+  border-bottom: 1px solid var(--agent-glass-border);
+  padding-bottom: 0.3em;
+}
+
+.markdown-preview h3 {
+  font-size: 1.25em;
+}
+
+.markdown-preview h4 {
+  font-size: 1em;
+}
+
+.markdown-preview h5 {
+  font-size: 0.875em;
+}
+
+.markdown-preview h6 {
+  font-size: 0.85em;
+  color: var(--agent-text-secondary);
+}
+
+.markdown-preview p {
+  margin-bottom: 16px;
+}
+
+.markdown-preview ul,
+.markdown-preview ol {
+  margin-bottom: 16px;
+  padding-left: 30px;
+}
+
+.markdown-preview li {
+  margin-bottom: 4px;
+}
+
+.markdown-preview code {
+  padding: 0.2em 0.4em;
+  margin: 0;
+  font-size: 85%;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
+  color: var(--agent-primary-color);
+}
+
+.markdown-preview pre {
+  padding: 16px;
+  overflow: auto;
+  font-size: 85%;
+  line-height: 1.45;
+  background-color: rgba(0, 0, 0, 0.3);
+  border-radius: 6px;
+  margin-bottom: 16px;
+  border: 1px solid var(--agent-glass-border);
+}
+
+.markdown-preview pre code {
+  display: inline;
+  max-width: auto;
+  padding: 0;
+  margin: 0;
+  overflow: visible;
+  line-height: inherit;
+  word-wrap: normal;
+  background-color: transparent;
+  border: 0;
+  color: inherit;
+}
+
+.markdown-preview blockquote {
+  padding: 0 1em;
+  color: var(--agent-text-secondary);
+  border-left: 0.25em solid var(--agent-glass-border);
+  margin-bottom: 16px;
+}
+
+.markdown-preview table {
+  border-collapse: collapse;
+  margin-bottom: 16px;
+  width: 100%;
+}
+
+.markdown-preview table th,
+.markdown-preview table td {
+  padding: 6px 13px;
+  border: 1px solid var(--agent-glass-border);
+}
+
+.markdown-preview table th {
+  font-weight: 600;
+  background-color: rgba(255, 255, 255, 0.05);
+  color: var(--agent-text-color);
+}
+
+.markdown-preview table tr:nth-child(2n) {
+  background-color: rgba(255, 255, 255, 0.02);
+}
+
+.markdown-preview hr {
+  height: 1px;
+  padding: 0;
+  margin: 24px 0;
+  background-color: var(--agent-glass-border);
+  border: 0;
+}
+
+.markdown-preview a {
+  color: var(--agent-primary-color);
+  text-decoration: none;
+}
+
+.markdown-preview a:hover {
+  text-decoration: underline;
+  text-shadow: 0 0 5px var(--agent-primary-color);
+}
+
+.markdown-preview img {
+  max-width: 100%;
+  box-sizing: content-box;
+  background-color: transparent;
+  margin-bottom: 16px;
+}
+
+.markdown-preview strong {
+  font-weight: 600;
+  color: #fff;
+}
+
+.markdown-preview em {
+  font-style: italic;
+}

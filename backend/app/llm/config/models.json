@@ -1,0 +1,77 @@
+{
+  "providers": {
+    "openai": {
+      "id": "openai",
+      "name": "OpenAI",
+      "models": [
+        {
+          "id": "gpt-3.5-turbo",
+          "name": "GPT-3.5 Turbo",
+          "description": "快速且经济的模型，适合大多数任务"
+        },
+        {
+          "id": "gpt-4",
+          "name": "GPT-4",
+          "description": "强大的多模态模型，适合复杂任务"
+        },
+        {
+          "id": "gpt-4-turbo-preview",
+          "name": "GPT-4 Turbo",
+          "description": "GPT-4的优化版本，更快更便宜"
+        },
+        {
+          "id": "gpt-4o",
+          "name": "GPT-4o",
+          "description": "最新的GPT-4优化版本"
+        },
+        {
+          "id": "gpt-4o-mini",
+          "name": "GPT-4o Mini",
+          "description": "GPT-4o的轻量版本"
+        }
+      ]
+    },
+    "dashscope": {
+      "id": "dashscope",
+      "name": "阿里百炼",
+      "models": [
+        {
+          "id": "qwen-turbo",
+          "name": "通义千问-Turbo",
+          "description": "快速响应，适合简单对话"
+        },
+        {
+          "id": "qwen-plus",
+          "name": "通义千问-Plus",
+          "description": "平衡性能和速度"
+        },
+        {
+          "id": "qwen-max",
+          "name": "通义千问-Max",
+          "description": "最强性能，适合复杂任务"
+        },
+        {
+          "id": "qwen3-max",
+          "name": "通义千问3-Max (最强)",
+          "description": "最新版本，最强性能"
+        },
+        {
+          "id": "qwen3-vl-plus",
+          "name": "通义千问3-VL-Plus (推荐)",
+          "description": "最新版本，支持视觉理解，推荐使用"
+        },
+        {
+          "id": "qwen-max-longcontext",
+          "name": "通义千问-Max-长文本",
+          "description": "支持超长上下文"
+        }
+      ]
+    }
+  },
+  "defaults": {
+    "provider": "dashscope",
+    "openai_model": "gpt-3.5-turbo",
+    "dashscope_model": "qwen-max"
+  }
+}
+

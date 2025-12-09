@@ -1,0 +1,157 @@
+:root {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  /* Future Agent System Theme Colors (Dark Default) */
+  --agent-bg-color: #0B0F19;
+  --agent-bg-gradient: linear-gradient(to bottom right, #0f172a, #000000);
+  
+  --agent-primary-color: #00F0FF; /* Cyber Cyan */
+  --agent-accent-color: #7000FF; /* Electric Purple */
+  --agent-success-color: #00ff9d;
+  --agent-warning-color: #ffbe0b;
+  --agent-error-color: #ff0055;
+  
+  --agent-text-color: #F8FAFC; /* Titanium White */
+  --agent-text-secondary: #94A3B8; /* Blue Gray */
+  
+  --agent-glass-bg: rgba(255, 255, 255, 0.03);
+  --agent-glass-border: rgba(255, 255, 255, 0.1);
+  --agent-glass-blur: blur(10px);
+  
+  --agent-card-hover-shadow: 0 0 20px rgba(0, 240, 255, 0.15);
+  --agent-card-hover-border: rgba(0, 240, 255, 0.5);
+
+  --agent-header-bg: rgba(11, 15, 25, 0.8);
+  --agent-border-color: rgba(255, 255, 255, 0.1);
+  --agent-input-bg: rgba(0, 0, 0, 0.2);
+}
+
+/* Light Theme Variables */
+[data-theme='light'] {
+  --agent-bg-color: #f0f2f5;
+  --agent-bg-gradient: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  
+  --agent-primary-color: #1677ff;
+  --agent-accent-color: #722ed1;
+  --agent-success-color: #52c41a;
+  --agent-warning-color: #faad14;
+  --agent-error-color: #ff4d4f;
+  
+  --agent-text-color: #1f1f1f;
+  --agent-text-secondary: #666666;
+  
+  --agent-glass-bg: rgba(255, 255, 255, 0.7);
+  --agent-glass-border: rgba(0, 0, 0, 0.06);
+  --agent-glass-blur: blur(10px);
+  
+  --agent-card-hover-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  --agent-card-hover-border: #1677ff;
+
+  --agent-header-bg: rgba(255, 255, 255, 0.8);
+  --agent-border-color: rgba(0, 0, 0, 0.06);
+  --agent-input-bg: #ffffff;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--agent-bg-color);
+  color: var(--agent-text-color);
+  transition: background-color 0.3s, color 0.3s;
+}
+
+body {
+  margin: 0;
+  background: var(--agent-bg-gradient);
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+}
+
+/* 滚动条样式 - Futuristic Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(128, 128, 128, 0.2);
+  border-radius: 3px;
+  border: 1px solid transparent;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--agent-primary-color);
+  box-shadow: 0 0 5px var(--agent-primary-color);
+}
+
+/* Ant Design Global Overrides */
+.ant-modal-content, .ant-message-notice-content {
+  background-color: var(--agent-glass-bg) !important;
+  backdrop-filter: var(--agent-glass-blur);
+  color: var(--agent-text-color) !important;
+  border: 1px solid var(--agent-glass-border);
+}
+
+[data-theme='dark'] .ant-modal-content {
+  background-color: #1a1f2e !important;
+}
+
+.ant-modal-header {
+  background: transparent !important;
+  border-bottom: 1px solid var(--agent-glass-border) !important;
+}
+
+.ant-modal-title {
+  color: var(--agent-text-color) !important;
+}
+
+.ant-modal-close {
+  color: var(--agent-text-secondary) !important;
+}
+
+.ant-input, .ant-input-textarea {
+  background-color: var(--agent-input-bg) !important;
+  border: 1px solid var(--agent-glass-border) !important;
+  color: var(--agent-text-color) !important;
+}
+
+.ant-input::placeholder {
+  color: var(--agent-text-secondary) !important;
+  opacity: 0.6;
+}
+
+.ant-input:focus, .ant-input-focused {
+  border-color: var(--agent-primary-color) !important;
+  box-shadow: 0 0 0 2px rgba(var(--agent-primary-color), 0.2) !important;
+}
+
+/* Typography overrides */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--agent-text-color) !important;
+  transition: color 0.3s;
+}
+
+span, div, p, li {
+  transition: color 0.3s, background-color 0.3s, border-color 0.3s;
+}

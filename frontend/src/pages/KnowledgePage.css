@@ -1,0 +1,402 @@
+/* Global Animations */
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-5px); }
+  100% { transform: translateY(0px); }
+}
+
+@keyframes glow-pulse {
+  0% { box-shadow: 0 0 5px rgba(0, 240, 255, 0.2); }
+  50% { box-shadow: 0 0 20px rgba(0, 240, 255, 0.5); }
+  100% { box-shadow: 0 0 5px rgba(0, 240, 255, 0.2); }
+}
+
+@keyframes slide-in {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.knowledge-container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--agent-bg-gradient);
+  overflow: hidden;
+  position: relative;
+}
+
+/* Add a subtle grid background */
+.knowledge-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: 
+    linear-gradient(var(--agent-glass-border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--agent-glass-border) 1px, transparent 1px);
+  background-size: 40px 40px;
+  opacity: 0.1;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.knowledge-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 32px;
+  background: var(--agent-header-bg);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--agent-border-color);
+  z-index: 10;
+  transition: background 0.3s ease, border-color 0.3s ease;
+}
+
+.knowledge-header h2 {
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: var(--agent-text-color);
+  margin: 0;
+  transition: color 0.3s ease;
+}
+
+/* 暗色模式下的渐变效果（可选，更柔和） */
+[data-theme='dark'] .knowledge-header h2 {
+  background: linear-gradient(90deg, var(--agent-text-color) 0%, rgba(0, 240, 255, 0.7) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* 亮色模式下使用纯色 */
+[data-theme='light'] .knowledge-header h2 {
+  color: var(--agent-text-color);
+  background: none;
+  -webkit-text-fill-color: var(--agent-text-color);
+}
+
+/* Tabs Styling Override */
+.knowledge-container .ant-tabs {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  z-index: 1;
+}
+
+.knowledge-container .ant-tabs-nav {
+  margin: 0 !important;
+  padding: 0 32px;
+  border-bottom: 1px solid var(--agent-glass-border);
+}
+
+.knowledge-container .ant-tabs-tab {
+  padding: 16px 0 !important;
+  margin: 0 32px 0 0 !important;
+  color: var(--agent-text-secondary);
+  font-size: 15px;
+  transition: all 0.3s;
+}
+
+.knowledge-container .ant-tabs-tab-active .ant-tabs-tab-btn {
+  color: var(--agent-primary-color) !important;
+  text-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
+}
+
+.knowledge-container .ant-tabs-ink-bar {
+  background: var(--agent-primary-color) !important;
+  box-shadow: 0 0 10px var(--agent-primary-color);
+}
+
+.knowledge-container .ant-tabs-content-holder {
+  flex: 1;
+  overflow: hidden;
+}
+
+/* --- Knowledge Base List View --- */
+.knowledge-content {
+  display: flex;
+  gap: 24px;
+  flex: 1;
+  overflow: hidden;
+  padding: 24px 32px;
+  height: 100%;
+}
+
+.kb-list {
+  width: 320px;
+  border-right: 1px solid var(--agent-glass-border);
+  padding-right: 24px;
+  overflow-y: auto;
+  background: rgba(255, 255, 255, 0.01);
+  border-radius: 16px;
+  padding: 20px;
+}
+
+.kb-item {
+  cursor: pointer;
+  padding: 16px;
+  border-radius: 12px;
+  margin-bottom: 12px;
+  background: var(--agent-glass-bg);
+  border: 1px solid transparent;
+  transition: all 0.3s ease;
+  color: var(--agent-text-secondary);
+}
+
+.kb-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--agent-glass-border);
+  transform: translateX(5px);
+}
+
+.kb-item-selected {
+  background: rgba(0, 240, 255, 0.1);
+  border: 1px solid var(--agent-primary-color);
+  color: var(--agent-text-color);
+  box-shadow: 0 0 15px rgba(0, 240, 255, 0.1);
+}
+
+.kb-details {
+  flex: 1;
+  overflow-y: auto;
+  background: var(--agent-glass-bg);
+  border-radius: 16px;
+  border: 1px solid var(--agent-glass-border);
+  padding: 24px;
+  backdrop-filter: var(--agent-glass-blur);
+}
+
+/* --- Prompt Cards View --- */
+.prompt-cards-container {
+  padding: 24px 32px;
+  height: 100%;
+  overflow-y: auto;
+  background: transparent;
+}
+
+.cards-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding: 16px 24px;
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  border: 1px solid var(--agent-glass-border);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.toolbar-left h3 {
+  color: var(--agent-text-color);
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Category Filters */
+.category-filter {
+  margin-bottom: 24px;
+  padding: 12px;
+  background: transparent;
+}
+
+.category-filter .ant-tag {
+  border: 1px solid var(--agent-glass-border);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--agent-text-secondary);
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 13px;
+  transition: all 0.3s;
+}
+
+.category-filter .ant-tag:hover {
+  color: var(--agent-text-color);
+  border-color: var(--agent-primary-color);
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.2);
+}
+
+/* Active Filter Tags - Need to target specific colors based on React logic if possible, 
+   but here general overrides */
+.category-filter .ant-tag-blue,
+.category-filter .ant-tag-green,
+.category-filter .ant-tag-purple,
+.category-filter .ant-tag-orange {
+  background: rgba(0, 240, 255, 0.15) !important;
+  border-color: var(--agent-primary-color) !important;
+  color: var(--agent-primary-color) !important;
+  box-shadow: 0 0 15px rgba(0, 240, 255, 0.2);
+}
+
+/* Cards Grid */
+.cards-grid .ant-list-item {
+  padding: 12px;
+}
+
+.prompt-card {
+  height: 100%;
+  background: rgba(30, 41, 59, 0.4) !important; /* Darker translucent bg */
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--agent-glass-border) !important;
+  border-radius: 20px !important;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+  position: relative;
+  overflow: hidden;
+}
+
+.prompt-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, transparent 100%);
+  pointer-events: none;
+}
+
+.prompt-card:hover {
+  transform: translateY(-5px) scale(1.02);
+  border-color: var(--agent-primary-color) !important;
+  box-shadow: 0 10px 30px rgba(0, 240, 255, 0.15) !important;
+}
+
+.prompt-card .ant-card-body {
+  padding: 24px !important;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  z-index: 1;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--agent-glass-border);
+}
+
+.card-title {
+  font-size: 16px !important;
+  font-weight: 600;
+  color: var(--agent-text-color) !important;
+  margin-right: 12px;
+}
+
+.card-content {
+  color: var(--agent-text-secondary) !important;
+  font-size: 14px;
+  line-height: 1.6;
+  flex: 1;
+  margin-bottom: 20px;
+}
+
+.card-tags .ant-tag {
+  background: rgba(0, 240, 255, 0.1);
+  border: none;
+  color: var(--agent-primary-color);
+}
+
+.card-footer {
+  border-top: 1px solid var(--agent-glass-border);
+  padding-top: 16px;
+  margin-top: auto;
+  display: flex;
+  justify-content: flex-end;
+  opacity: 0.7;
+  transition: opacity 0.3s;
+}
+
+.prompt-card:hover .card-footer {
+  opacity: 1;
+}
+
+.card-footer .ant-btn-link {
+  color: var(--agent-primary-color);
+}
+
+.card-footer .ant-btn-link:hover {
+  text-shadow: 0 0 8px var(--agent-primary-color);
+}
+
+/* Empty State Override */
+.ant-empty-description {
+  color: var(--agent-text-secondary) !important;
+}
+
+/* Modal Contents */
+.card-detail-content {
+  color: var(--agent-text-secondary);
+}
+
+.card-detail-content .ant-tag {
+  background: rgba(0, 240, 255, 0.1);
+  border-color: rgba(0, 240, 255, 0.3);
+  color: var(--agent-primary-color);
+}
+
+/* --- Table Overrides --- */
+.knowledge-container .ant-table {
+  background: transparent !important;
+  color: var(--agent-text-secondary);
+}
+
+.knowledge-container .ant-table-thead > tr > th {
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: var(--agent-text-color) !important;
+  border-bottom: 1px solid var(--agent-glass-border) !important;
+}
+
+.knowledge-container .ant-table-tbody > tr > td {
+  border-bottom: 1px solid var(--agent-glass-border) !important;
+  color: var(--agent-text-secondary) !important;
+}
+
+.knowledge-container .ant-table-tbody > tr:hover > td {
+  background: rgba(255, 255, 255, 0.05) !important;
+}
+
+.knowledge-container .ant-pagination-item a {
+  color: var(--agent-text-secondary);
+}
+
+.knowledge-container .ant-pagination-item-active {
+  background: transparent;
+  border-color: var(--agent-primary-color);
+}
+
+.knowledge-container .ant-pagination-item-active a {
+  color: var(--agent-primary-color);
+}
+
+/* --- Statistic Overrides --- */
+.ant-statistic-title {
+  color: var(--agent-text-secondary) !important;
+}
+
+.ant-statistic-content {
+  color: var(--agent-text-color) !important;
+}
+
+/* Ant Card default background override for management tab */
+.knowledge-container .ant-card {
+  background: var(--agent-glass-bg) !important;
+  border: 1px solid var(--agent-glass-border) !important;
+  color: var(--agent-text-color);
+}
+
+.knowledge-container .ant-card-head {
+  border-bottom: 1px solid var(--agent-glass-border) !important;
+  color: var(--agent-text-color) !important;
+}
+
+.ant-card-head-title {
+  color: var(--agent-text-color) !important;
+}

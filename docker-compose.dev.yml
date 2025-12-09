@@ -1,0 +1,79 @@
+version: '3.8'
+
+# 开发环境 - 仅启动中间件服务
+# 用于本地开发调试，后端和前端在本地IDE中运行
+
+services:
+  # PostgreSQL数据库
+  postgres:
+    image: postgres:15-alpine
+    container_name: agentsys-postgres-dev
+    environment:
+      POSTGRES_DB: agentsys
+      POSTGRES_USER: agentsys
+      POSTGRES_PASSWORD: agentsys123
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agentsys"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - agentsys-network
+
+  # Redis缓存
+  redis:
+    image: redis:7-alpine
+    container_name: agentsys-redis-dev
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data_dev:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - agentsys-network
+
+  # ChromaDB向量数据库
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: agentsys-chromadb-dev
+    environment:
+      - IS_PERSISTENT=TRUE
+      - ANONYMIZED_TELEMETRY=False
+      - ALLOW_RESET=TRUE
+      - CHROMA_SERVER_AUTHN_CREDENTIALS=
+      - CHROMA_SERVER_AUTHN_PROVIDER=
+      - PERSIST_DIRECTORY=/chroma/chroma
+    volumes:
+      - chroma_data_dev:/chroma/chroma
+    ports:
+      - "8001:8000"
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /data/chroma.sqlite3"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    networks:
+      - agentsys-network
+
+volumes:
+  postgres_data_dev:
+    driver: local
+  redis_data_dev:
+    driver: local
+  chroma_data_dev:
+    driver: local
+
+networks:
+  agentsys-network:
+    driver: bridge
+
