@@ -6,7 +6,7 @@ import sys
 
 from app.core.config import settings
 from app.db.database import engine, Base
-from app.api.routes import chat, knowledge, tasks
+from app.api.routes import chat, knowledge, tasks, planning
 
 
 # 配置日志
@@ -57,6 +57,7 @@ app.add_middleware(
 app.include_router(chat.router, prefix="/api")
 app.include_router(knowledge.router, prefix="/api")
 app.include_router(tasks.router, prefix="/api")
+app.include_router(planning.router, prefix="/api")
 
 
 @app.get("/")

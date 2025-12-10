@@ -182,6 +182,37 @@ async def chat_stream(request: ChatRequest, db: Session = Depends(get_db)):
                 provider = request.llm_config.provider
                 model = request.llm_config.model
             
+            # 如果启用任务规划，检测是否需要规划
+            planning_result = None
+            if request.enable_planning:
+                # 检测消息是否包含任务规划关键词
+                planning_keywords = ["规划", "计划", "分解", "步骤", "任务", "执行", "方案"]
+                if any(keyword in request.message for keyword in planning_keywords):
+                    try:
+                        from app.services.planning_agent_service import planning_agent_service
+                        
+                        # 创建规划 Agent
+                        planning_agent = await planning_agent_service.create_planning_agent(
+                            conversation_id=conversation.id,
+                            llm_config={"provider": provider, "model": model} if provider and model else None,
+                            enable_planning=True,
+                            history=history
+                        )
+                        
+                        # 执行规划
+                        planning_result = await planning_agent_service.plan_task(
+                            task_description=request.message,
+                            conversation_id=conversation.id,
+                            agent=planning_agent,
+                            db=db
+                        )
+                        
+                        # 发送规划结果
+                        yield f"data: {json.dumps({'type': 'planning', 'planning_result': planning_result})}\n\n"
+                    except Exception as e:
+                        logger.error(f"任务规划失败: {e}")
+                        yield f"data: {json.dumps({'type': 'planning_error', 'message': str(e)})}\n\n"
+            
             # 调用流式agent服务
             final_response = ""
             intermediate_steps = []
@@ -222,7 +253,8 @@ async def chat_stream(request: ChatRequest, db: Session = Depends(get_db)):
                         content=final_response,
                         meta_info={
                             "intermediate_steps": intermediate_steps,
-                            "thinking": thinking_content  # 保存推理过程
+                            "thinking": thinking_content,  # 保存推理过程
+                            "planning_result": planning_result  # 保存规划结果
                         }
                     )
                     db.add(assistant_message)

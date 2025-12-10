@@ -63,6 +63,7 @@ class ChatRequest(BaseModel):
     search_provider: Optional[str] = None  # 搜索提供商: 'tavily' 或 'baidu'
     role_preset_id: Optional[str] = None  # 指定的角色预设ID，如果指定则直接使用该预设，不再检索
     deep_reasoning: Optional[bool] = False  # 深度推理模式
+    enable_planning: Optional[bool] = False  # 启用任务规划模式
 
 
 class ChatResponse(BaseModel):
@@ -212,3 +213,53 @@ class PromptGenerateResponse(BaseModel):
     content: str  # 生成的内容
     error: Optional[str] = None
 
+
+# 任务规划相关
+class PlanningRequest(BaseModel):
+    conversation_id: int
+    task_description: str
+    llm_config: Optional[LLMConfig] = None
+
+
+class TaskStep(BaseModel):
+    step_id: str
+    description: str
+    status: str
+    priority: Optional[str] = None
+    estimated_time: Optional[str] = None
+    dependencies: List[str] = []
+    result: Optional[Dict[str, Any]] = None
+    
+    class Config:
+        from_attributes = True
+
+
+class TaskDependencyNode(BaseModel):
+    id: str
+    data: Dict[str, Any]
+
+
+class TaskDependencyEdge(BaseModel):
+    source: str
+    target: str
+
+
+class TaskDependencyGraph(BaseModel):
+    nodes: List[TaskDependencyNode]
+    edges: List[TaskDependencyEdge]
+
+
+class PlanningResponse(BaseModel):
+    success: bool
+    task_id: int
+    steps: List[TaskStep]
+    dependencies: TaskDependencyGraph
+
+
+class TaskStatusResponse(BaseModel):
+    task_id: int
+    status: str
+    total_steps: int
+    completed_steps: int
+    progress: float
+    status_count: Dict[str, int]

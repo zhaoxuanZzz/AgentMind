@@ -11,6 +11,10 @@ import type {
   TaskPlanRequest,
   TaskPlanResponse,
   LLMProvidersResponse,
+  PlanningRequest,
+  PlanningResponse,
+  TaskDependencyGraph,
+  TaskStatusResponse,
 } from './types'
 
 // 对话相关API
@@ -21,11 +25,12 @@ export const chatApi = {
   sendMessageStream: async (
     data: ChatRequest,
     onChunk: (chunk: {
-      type: 'thinking' | 'tool' | 'content' | 'done' | 'error' | 'conversation_id'
+      type: 'thinking' | 'tool' | 'content' | 'done' | 'error' | 'conversation_id' | 'planning' | 'planning_error'
       content?: string
       tool_info?: any
       conversation_id?: number
       message?: string
+      planning_result?: any
     }) => void
   ) => {
     // 获取baseURL，处理相对路径
@@ -206,5 +211,17 @@ export const taskApi = {
   
   deleteTask: (id: number) =>
     apiClient.delete(`/tasks/${id}`),
+}
+
+// 任务规划相关API
+export const planningApi = {
+  planTask: (data: PlanningRequest) =>
+    apiClient.post<any, PlanningResponse>('/planning/plan', data),
+  
+  getTaskDependencies: (taskId: number) =>
+    apiClient.get<any, TaskDependencyGraph>(`/planning/tasks/${taskId}/dependencies`),
+  
+  getTaskStatus: (taskId: number) =>
+    apiClient.get<any, TaskStatusResponse>(`/planning/tasks/${taskId}/status`),
 }
 

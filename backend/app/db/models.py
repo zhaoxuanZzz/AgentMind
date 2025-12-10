@@ -86,3 +86,57 @@ class RolePreset(Base):
     tags = Column(JSON, nullable=True)  # 标签列表，存储为JSON数组
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class PlanningTask(Base):
+    """任务规划表 - 存储任务规划的主任务信息"""
+    __tablename__ = "planning_tasks"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    conversation_id = Column(Integer, ForeignKey("conversations.id"), nullable=False, index=True)
+    title = Column(String(200), nullable=False)
+    description = Column(Text, nullable=False)
+    status = Column(String(20), default="pending", nullable=False, index=True)  # pending, planned, in_progress, completed, failed
+    plan_data = Column(JSON, nullable=True)  # 规划数据
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    steps = relationship("TaskStep", back_populates="planning_task", cascade="all, delete-orphan")
+
+
+class TaskStep(Base):
+    """任务步骤表 - 存储任务拆解后的子步骤"""
+    __tablename__ = "task_steps"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    planning_task_id = Column(Integer, ForeignKey("planning_tasks.id"), nullable=False, index=True)
+    step_id = Column(String(50), nullable=False, unique=True, index=True)  # 步骤唯一标识
+    description = Column(Text, nullable=False)
+    status = Column(String(20), default="pending", nullable=False, index=True)  # pending, in_progress, completed, failed
+    priority = Column(String(10), nullable=True)  # high, medium, low
+    estimated_time = Column(String(20), nullable=True)  # 预估时间
+    dependencies = Column(JSON, nullable=True)  # 依赖的步骤ID列表
+    result = Column(JSON, nullable=True)  # 执行结果
+    sub_agent_id = Column(String(100), nullable=True)  # 子代理ID
+    context_file_path = Column(String(500), nullable=True)  # 上下文文件路径
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    planning_task = relationship("PlanningTask", back_populates="steps")
+    execution_logs = relationship("TaskExecutionLog", back_populates="task_step", cascade="all, delete-orphan")
+
+
+class TaskExecutionLog(Base):
+    """任务执行日志表"""
+    __tablename__ = "task_execution_logs"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    task_step_id = Column(Integer, ForeignKey("task_steps.id"), nullable=False, index=True)
+    action = Column(String(50), nullable=False)  # 执行动作
+    tool_name = Column(String(100), nullable=True)  # 使用的工具
+    input_data = Column(JSON, nullable=True)  # 输入数据
+    output_data = Column(JSON, nullable=True)  # 输出数据
+    execution_time = Column(String(20), nullable=True)  # 执行时间（秒）
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    
+    task_step = relationship("TaskStep", back_populates="execution_logs")

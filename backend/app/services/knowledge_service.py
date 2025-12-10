@@ -314,6 +314,33 @@ class KnowledgeService:
             logger.error(f"Error searching role presets: {e}")
             return []
     
+    def get_role_preset_by_id(self, db_session, preset_id: str) -> Optional[Dict]:
+        """根据ID从PostgreSQL获取单个角色预设"""
+        try:
+            from app.db import models
+            
+            preset = db_session.query(models.RolePreset).filter(
+                models.RolePreset.preset_id == preset_id
+            ).first()
+            
+            if not preset:
+                logger.warning(f"Role preset with id {preset_id} not found")
+                return None
+            
+            return {
+                "id": preset.preset_id,
+                "title": preset.title,
+                "content": preset.prompt_content,
+                "category": preset.category,
+                "tags": preset.tags if preset.tags else [],
+                "created_at": preset.created_at.isoformat() if preset.created_at else None,
+                "updated_at": preset.updated_at.isoformat() if preset.updated_at else None
+            }
+            
+        except Exception as e:
+            logger.error(f"Error getting role preset by id: {e}")
+            return None
+    
     def get_all_role_presets(self, db_session, skip: int = 0, limit: int = 100) -> List[Dict]:
         """从PostgreSQL获取所有角色预设"""
         try:

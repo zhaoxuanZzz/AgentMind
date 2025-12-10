@@ -66,6 +66,9 @@ class Settings(BaseSettings):
     # CORS
     CORS_ORIGINS: str = "http://localhost:3000"
     
+    # Workspace
+    WORKSPACE_DIR: str = "./workspace"  # 工作目录，用于存储规划任务的上下文文件
+    
     @property
     def cors_origins_list(self) -> List[str]:
         return [origin.strip() for origin in self.CORS_ORIGINS.split(",")]

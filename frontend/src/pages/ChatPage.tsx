@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { Input, Button, Spin, message, Card, Avatar, Space, Select, Tooltip, Badge, List, Empty, Tag, Switch, Divider, Modal, Form, Collapse, Timeline } from 'antd'
-import { SendOutlined, RobotOutlined, UserOutlined, ThunderboltFilled, PlusOutlined, DeleteOutlined, HistoryOutlined, BookOutlined, SettingOutlined, TagsOutlined, EditOutlined, ToolOutlined, CheckCircleOutlined, ClockCircleOutlined, SearchOutlined, GlobalOutlined, FileTextOutlined, DatabaseOutlined, CalculatorOutlined } from '@ant-design/icons'
+import { SendOutlined, RobotOutlined, UserOutlined, ThunderboltFilled, PlusOutlined, DeleteOutlined, HistoryOutlined, BookOutlined, SettingOutlined, TagsOutlined, EditOutlined, ToolOutlined, CheckCircleOutlined, ClockCircleOutlined, SearchOutlined, GlobalOutlined, FileTextOutlined, DatabaseOutlined, CalculatorOutlined, ProjectOutlined } from '@ant-design/icons'
 import { chatApi, knowledgeApi } from '../api/services'
-import type { Message, Conversation } from '../api/types'
+import type { Message, Conversation, PlanningResponse } from '../api/types'
+import TaskDependencyGraph from '../components/TaskDependencyGraph'
 import './ChatPage.css'
 
 const { TextArea } = Input
@@ -46,6 +47,11 @@ const ChatPage = () => {
     const saved = localStorage.getItem('deepReasoning')
     return saved === 'true'
   })
+  const [enablePlanning, setEnablePlanning] = useState<boolean>(() => {
+    const saved = localStorage.getItem('enablePlanning')
+    return saved === 'true'
+  })
+  const [planningResult, setPlanningResult] = useState<PlanningResponse | null>(null)
   const [isPromptModalOpen, setIsPromptModalOpen] = useState(false)
   const [editingPrompt, setEditingPrompt] = useState<any>(null)
   const [viewingPrompt, setViewingPrompt] = useState<any>(null)
@@ -320,6 +326,7 @@ const ChatPage = () => {
           search_provider: selectedSearchProvider,
           role_preset_id: selectedRolePresetId,
           deep_reasoning: deepReasoning,
+          enable_planning: enablePlanning,
           llm_config: {
             provider: selectedProvider,
             model: selectedModel
@@ -399,6 +406,19 @@ const ChatPage = () => {
             setStreamingContent('')
             setCurrentStreamingMessageId(null)
             loadConversations()
+          } else if (chunk.type === 'planning') {
+            // 任务规划结果
+            const planningData = chunk.planning_result
+            if (planningData) {
+              setPlanningResult({
+                success: true,
+                task_id: planningData.task_id,
+                steps: planningData.steps || [],
+                dependencies: planningData.dependencies || { nodes: [], edges: [] }
+              })
+            }
+          } else if (chunk.type === 'planning_error') {
+            message.error(chunk.message || '任务规划失败')
           } else if (chunk.type === 'error') {
             message.error(chunk.message || '请求失败')
             setMessages((prev) => prev.filter((msg) => msg.id !== assistantMsgId))
@@ -428,6 +448,7 @@ const ChatPage = () => {
   const handleNewChat = () => {
     setMessages([])
     setConversationId(undefined)
+    setPlanningResult(null)
     inputRef.current?.focus()
     loadConversations()
   }
@@ -954,6 +975,24 @@ const ChatPage = () => {
                   <ThunderboltFilled style={{ marginRight: 4 }} />
                   深度推理
                 </Button>
+                <Button
+                  type={enablePlanning ? "primary" : "default"}
+                  size="small"
+                  onClick={() => {
+                    const newValue = !enablePlanning
+                    setEnablePlanning(newValue)
+                    localStorage.setItem('enablePlanning', String(newValue))
+                  }}
+                  style={{
+                    height: '32px',
+                    padding: '0 12px',
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0
+                  }}
+                >
+                  <ProjectOutlined style={{ marginRight: 4 }} />
+                  任务规划
+                </Button>
               </div>
               {selectedRolePresetId && (
                 <div className="prompt-card-hint">
@@ -961,7 +1000,57 @@ const ChatPage = () => {
                   <span>已选择角色预设，将直接使用</span>
                 </div>
               )}
+              {enablePlanning && (
+                <div className="prompt-card-hint" style={{ marginTop: 8 }}>
+                  <CheckCircleOutlined style={{ color: '#52c41a' }} />
+                  <span style={{ color: '#52c41a' }}>已启用任务规划模式</span>
+                </div>
+              )}
             </div>
+          )}
+          {planningResult && (
+            <Card
+              title={
+                <Space>
+                  <ProjectOutlined />
+                  <span>任务规划结果</span>
+                </Space>
+              }
+              style={{ marginBottom: 16 }}
+              extra={
+                <Button
+                  size="small"
+                  onClick={() => setPlanningResult(null)}
+                >
+                  关闭
+                </Button>
+              }
+            >
+              <TaskDependencyGraph
+                tasks={planningResult.steps}
+                dependencies={planningResult.dependencies.edges}
+                onTaskClick={(taskId) => {
+                  const task = planningResult.steps.find(t => t.step_id === taskId)
+                  if (task) {
+                    Modal.info({
+                      title: `任务详情: ${task.step_id}`,
+                      width: 600,
+                      content: (
+                        <div>
+                          <p><strong>描述:</strong> {task.description}</p>
+                          <p><strong>状态:</strong> {task.status}</p>
+                          {task.priority && <p><strong>优先级:</strong> {task.priority}</p>}
+                          {task.estimated_time && <p><strong>预估时间:</strong> {task.estimated_time}</p>}
+                          {task.dependencies.length > 0 && (
+                            <p><strong>依赖:</strong> {task.dependencies.join(', ')}</p>
+                          )}
+                        </div>
+                      )
+                    })
+                  }
+                }}
+              />
+            </Card>
           )}
           <div className="input-wrapper">
             <TextArea

@@ -12,6 +12,9 @@ redis==5.2.1
 httpx==0.28.1
 
 # LangChain and AI
+# Note: langchain>=1.1.0 requires Python>=3.10
+# Current Python version: 3.9.21, using langchain 0.3.x
+# If you need deepagents (requires langchain>=1.1.0), upgrade Python to 3.10+
 langchain>=0.3.0
 langchain-community>=0.3.0
 langchain-openai>=0.2.0
@@ -33,4 +36,9 @@ langchain-tavily>=0.1.0
 python-dotenv==1.0.1
 loguru==0.7.3
 aiofiles==24.1.0
+
+# Planning Agent
+langgraph>=0.2.0
+langgraph-checkpoint-postgres>=0.1.0
+networkx>=3.0
 

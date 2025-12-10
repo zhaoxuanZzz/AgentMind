@@ -56,6 +56,7 @@ export interface ChatRequest {
   search_provider?: string  // 搜索提供商: 'tavily' 或 'baidu'
   role_preset_id?: string  // 指定的角色预设ID，如果指定则直接使用该预设，不再检索
   deep_reasoning?: boolean  // 深度推理模式
+  enable_planning?: boolean  // 启用任务规划模式
 }
 
 export interface ChatResponse {
@@ -140,5 +141,58 @@ export interface TaskPlanResponse {
   success: boolean
   plan: string
   steps: TaskStep[]
+}
+
+// 任务规划相关类型
+export interface PlanningRequest {
+  conversation_id: number
+  task_description: string
+  llm_config?: LLMConfig
+}
+
+export interface PlanningTaskStep {
+  step_id: string
+  description: string
+  status: 'pending' | 'in_progress' | 'completed' | 'failed'
+  priority?: string
+  estimated_time?: string
+  dependencies: string[]
+  result?: any
+}
+
+export interface TaskDependencyNode {
+  id: string
+  data: any
+}
+
+export interface TaskDependencyEdge {
+  source: string
+  target: string
+}
+
+export interface TaskDependencyGraph {
+  nodes: TaskDependencyNode[]
+  edges: TaskDependencyEdge[]
+}
+
+export interface PlanningResponse {
+  success: boolean
+  task_id: number
+  steps: PlanningTaskStep[]
+  dependencies: TaskDependencyGraph
+}
+
+export interface TaskStatusResponse {
+  task_id: number
+  status: string
+  total_steps: number
+  completed_steps: number
+  progress: number
+  status_count: {
+    pending: number
+    in_progress: number
+    completed: number
+    failed: number
+  }
 }
 

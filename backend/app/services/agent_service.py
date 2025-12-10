@@ -170,7 +170,7 @@ class AgentService:
             
             # 构建提示词
             prompt = PromptBuilder.build_openai_functions_prompt(
-                knowledge_prompts=knowledge_prompts
+                knowledge_prompts=role_prompts
             )
             
             agent = create_openai_functions_agent(
@@ -336,7 +336,7 @@ class AgentService:
                 # 构建提示词
                 prompt = PromptBuilder.build_react_prompt_for_stream(
                     tools=tools,
-                    knowledge_prompts=knowledge_prompts
+                    knowledge_prompts=role_prompts
                 )
                 
                 agent = create_react_agent(llm, tools, prompt)
@@ -347,7 +347,7 @@ class AgentService:
                 
                 # 构建提示词
                 prompt = PromptBuilder.build_openai_functions_prompt_for_stream(
-                    knowledge_prompts=knowledge_prompts
+                    knowledge_prompts=role_prompts
                 )
                 
                 agent = create_openai_functions_agent(llm, tools, prompt)
