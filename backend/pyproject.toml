@@ -1,0 +1,51 @@
+[project]
+name = "agentmind-backend"
+version = "0.1.0"
+description = "AgentMind Backend API"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi==0.115.6",
+    "uvicorn[standard]==0.34.0",
+    "pydantic==2.10.6",
+    "pydantic-settings>=2.10.1",
+    "sqlalchemy==2.0.36",
+    "psycopg2-binary==2.9.10",
+    "alembic==1.14.0",
+    "python-multipart==0.0.20",
+    "python-jose[cryptography]==3.3.0",
+    "passlib[bcrypt]==1.7.4",
+    "redis==5.2.1",
+    "httpx==0.28.1",
+    "langchain>=1.2.0",
+    "langchain-community>=0.4.1",
+    "langchain-openai>=1.1.6",
+    "openai>=1.50.0",
+    "chromadb>=0.5.0",
+    "sentence-transformers>=3.0.0",
+    "tiktoken>=0.7.0",
+    "dashscope==1.20.13",
+    "tavily-python>=0.5.0",
+    "beautifulsoup4>=4.12.0",
+    "pypdf>=5.1.0",
+    "langchain-tavily>=0.1.0",
+    "python-dotenv==1.0.1",
+    "loguru==0.7.3",
+    "aiofiles==24.1.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
+# 如果需要开发依赖，使用 dependency-groups 替代已弃用的 dev-dependencies
+# [dependency-groups]
+# dev = []
+
+[tool.uv.sources]
+# 如果需要使用特定的源，可以在这里配置
+# 例如使用清华镜像源
+# index-url = "https://pypi.tuna.tsinghua.edu.cn/simple"
+
