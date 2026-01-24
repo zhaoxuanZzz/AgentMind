@@ -47,7 +47,8 @@
 
 ### 3.1 技术栈
 - **核心库**：React 18 + TypeScript 5.x
-- **UI 框架**：Ant Design 5.x + @ant-design/x-sdk
+- **UI 框架**：Ant Design 6.x（升级以支持 @ant-design/x）
+- **AI 组件**：@ant-design/x 2.x（AI 专用 UI 组件）+ @ant-design/x-sdk（流式处理）
 - **动画**：framer-motion 11.x
 - **Markdown**：react-markdown + highlight.js
 - **构建工具**：Vite 5.x

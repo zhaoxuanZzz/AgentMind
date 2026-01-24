@@ -18,12 +18,20 @@
 ```bash
 cd frontend
 
-# 安装核心依赖
+# 升级 Ant Design 到 6.x 并安装 AI 组件库（已完成）
+npm install antd@latest @ant-design/x --save
+
+# 安装其他核心依赖
 npm install framer-motion react-markdown react-syntax-highlighter lodash-es
 
 # 安装类型定义
 npm install -D @types/lodash-es @types/react-syntax-highlighter
 ```
+
+**已安装的包**：
+- `antd@6.x` - Ant Design UI 组件库 ✅
+- `@ant-design/x` - AI 专用 UI 组件 ✅
+- `@ant-design/x-sdk` - 流式处理 SDK ✅
 
 ---
 

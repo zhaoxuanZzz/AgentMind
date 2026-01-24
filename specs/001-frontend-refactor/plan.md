@@ -20,7 +20,8 @@
 **语言/版本**：TypeScript 5.2+、ECMAScript 2022  
 **主要依赖**：
   - React 18.2+（前端框架）
-  - Ant Design 5.11+（UI 组件库）
+  - Ant Design 6.x（UI 组件库 - 已升级以支持 @ant-design/x）
+  - @ant-design/x 2.1+（AI 专用 UI 组件库 - 已安装）
   - @ant-design/x-sdk 2.1+（AI 对话流处理 - 已安装）
   - framer-motion 11.x（动画库 - 需安装）
   - react-markdown + highlight.js（Markdown 渲染 - highlight.js 已安装）
@@ -330,8 +331,10 @@ backend/                     # 保持不变（仅在需要时调整 API）
 ### 技术栈清单
 
 **现有依赖**：
-- React 18.2、TypeScript 5.2、Ant Design 5.11
-- @ant-design/x-sdk 2.1.3 ✅
+- React 18.2、TypeScript 5.2
+- Ant Design 6.x ✅（已升级）
+- @ant-design/x 2.1.3 ✅（AI 组件库）
+- @ant-design/x-sdk 2.1.3 ✅（流式处理）
 - highlight.js 11.9.0 ✅
 
 **需要安装**：

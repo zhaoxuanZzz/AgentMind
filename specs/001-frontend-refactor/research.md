@@ -442,6 +442,96 @@ const useResponsive = () => {
 
 ---
 
+## R6.5: @ant-design/x AI 组件库
+
+### 核心 AI 组件
+
+`@ant-design/x` 提供了专门为 AI 应用设计的 UI 组件：
+
+#### 1. Bubble（消息气泡）
+```typescript
+import { Bubble } from '@ant-design/x'
+
+// AI 消息
+<Bubble
+  content="这是 AI 的回复内容"
+  avatar={{ src: '/ai-avatar.png' }}
+  typing // 打字机效果
+  messageRender={(content) => <Markdown>{content}</Markdown>}
+/>
+
+// 用户消息
+<Bubble
+  placement="end"
+  content="用户的问题"
+  avatar={{ src: '/user-avatar.png' }}
+/>
+```
+
+#### 2. Conversations（对话组件）
+```typescript
+import { Conversations } from '@ant-design/x'
+
+<Conversations
+  items={messages}
+  renderItem={(message) => (
+    <Bubble
+      content={message.content}
+      avatar={message.role === 'user' ? userAvatar : aiAvatar}
+      placement={message.role === 'user' ? 'end' : 'start'}
+    />
+  )}
+/>
+```
+
+#### 3. Sender（输入组件）
+```typescript
+import { Sender } from '@ant-design/x'
+
+<Sender
+  placeholder="输入消息..."
+  onSubmit={(message) => sendMessage(message)}
+  loading={isStreaming}
+  actions={[
+    { icon: <FileOutlined />, onClick: handleAttachment },
+    { icon: <SettingOutlined />, onClick: openSettings }
+  ]}
+/>
+```
+
+#### 4. Prompts（提示词组件）
+```typescript
+import { Prompts } from '@ant-design/x'
+
+<Prompts
+  items={[
+    { key: '1', label: '总结这篇文章' },
+    { key: '2', label: '解释这个概念' },
+    { key: '3', label: '生成代码示例' }
+  ]}
+  onItemClick={(item) => sendMessage(item.label)}
+/>
+```
+
+### 实施决策
+
+**决定**：使用 `@ant-design/x` 替代自定义消息组件
+
+**理由**：
+1. 专门为 AI 场景设计，开箱即用
+2. 内置打字机效果、流式渲染支持
+3. 与 Ant Design 6.x 完美集成
+4. 减少自定义组件开发工作量
+5. 统一的 AI 交互体验
+
+**组件映射**：
+- 原 `MessageBubble` → `Bubble`
+- 原 `MessageList` → `Conversations`
+- 原 `MessageInput` → `Sender`
+- 新增 `Prompts` 用于快捷提示词
+
+---
+
 ## R6: 性能优化技术
 
 ### 6.1 第一阶段优化（Phase 2-3）

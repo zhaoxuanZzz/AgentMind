@@ -34,6 +34,16 @@ interface Message {
   updated_at?: string
 }
 
+// @ant-design/x Bubble 组件所需类型
+interface BubbleMessage {
+  key: string | number
+  role: 'user' | 'assistant'
+  content: string
+  avatar?: string | { src: string; alt?: string }
+  typing?: boolean          // 是否显示打字机效果
+  status?: 'loading' | 'success' | 'error'
+}
+
 // 临时流式消息（UI 状态）
 interface StreamingMessage {
   conversation_id?: number
