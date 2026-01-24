@@ -18,7 +18,7 @@ NC='\033[0m' # No Color
 # 切换到脚本所在目录
 cd "$(dirname "$0")"
 
-# 激活虚拟环境（支持 uv、venv 和 conda）
+# 激活虚拟环境（支持 uv 和 venv）
 echo -e "${YELLOW}[1/3] 激活虚拟环境...${NC}"
 
 # 优先检查 uv
@@ -26,20 +26,6 @@ if command -v uv &> /dev/null; then
     echo "检测到 uv，使用 uv 虚拟环境..."
     # uv 会自动管理虚拟环境，无需手动激活
     USE_UV=true
-elif command -v conda &> /dev/null; then
-    # conda 可用，尝试激活 agentsys 环境
-    echo "检测到 conda，尝试激活环境..."
-    
-    # 初始化 conda（如果需要）
-    eval "$(conda shell.bash hook)" 2>/dev/null || true
-    
-    # 尝试激活 agentsys 环境
-    conda activate agentsys 2>/dev/null
-    if [ $? -ne 0 ]; then
-        echo "未找到 agentsys conda 环境，尝试激活 base 环境..."
-        conda activate base
-    fi
-    USE_UV=false
 elif [ -f "venv/bin/activate" ]; then
     # 使用 venv
     echo "使用 venv 虚拟环境..."
@@ -50,8 +36,7 @@ else
     echo ""
     echo "请选择一种方式创建虚拟环境:"
     echo "  1. 使用 uv (推荐): uv venv"
-    echo "  2. 使用 conda: conda create -n agentsys python=3.11"
-    echo "  3. 使用 venv: python -m venv venv"
+    echo "  2. 使用 venv: python -m venv venv"
     echo ""
     exit 1
 fi

@@ -83,14 +83,14 @@ shell-db: ## 进入数据库shell
 test: ## 运行测试（TODO）
 	@echo "测试功能即将推出..."
 
-install-dev: ## 安装开发依赖
-	@echo "正在安装后端开发依赖..."
-	cd backend && pip install -r requirements.txt
+install-dev: ## 安装开发依赖（使用 uv）
+	@echo "正在使用 uv 安装后端开发依赖..."
+	cd backend && uv sync
 	@echo "正在安装前端开发依赖..."
 	cd frontend && npm install
 
-dev-backend: ## 运行后端开发服务器
-	cd backend && python -m app.main
+dev-backend: ## 运行后端开发服务器（使用 uv）
+	cd backend && uv run uvicorn app.main:app --reload
 
 dev-frontend: ## 运行前端开发服务器
 	cd frontend && npm run dev

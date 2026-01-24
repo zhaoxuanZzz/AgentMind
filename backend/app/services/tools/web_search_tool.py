@@ -1,5 +1,5 @@
 """统一的联网搜索工具 - 支持Tavily和百度搜索"""
-from langchain.tools import Tool
+from langchain_core.tools import Tool
 from app.core.config import settings
 from loguru import logger
 from typing import Optional

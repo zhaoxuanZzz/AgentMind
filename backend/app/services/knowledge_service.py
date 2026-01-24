@@ -1,6 +1,6 @@
 import chromadb
 from langchain_community.embeddings import HuggingFaceEmbeddings, DashScopeEmbeddings
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from typing import List, Dict, Optional
 from app.core.config import settings
 from loguru import logger

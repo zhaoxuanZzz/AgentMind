@@ -1,5 +1,5 @@
 """流式回调处理器"""
-from langchain.callbacks.base import AsyncCallbackHandler
+from langchain_core.callbacks import AsyncCallbackHandler
 from typing import List, Dict, Optional
 from loguru import logger
 
@@ -149,9 +149,10 @@ class StreamCallbackHandler(AsyncCallbackHandler):
                 "content": self.current_thinking.strip()
             })
             self.current_thinking = ""
-        
-        # 发送buffer中剩余的内容
-        if self.buffer.strip():
+            # 清空buffer，因为current_thinking已经包含了最后一部分未发送的内容
+            self.buffer = ""
+        elif self.buffer.strip():
+            # 如果current_thinking为空，才处理buffer
             if self.in_final_answer:
                 content = self.buffer.replace("Final Answer:", "").replace("final answer:", "").strip()
                 if content:

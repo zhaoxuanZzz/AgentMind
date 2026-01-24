@@ -1,13 +1,12 @@
-from langchain.agents import AgentExecutor, create_openai_functions_agent, create_react_agent
-from langchain.tools import Tool
-from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder, PromptTemplate
-from langchain.memory import ConversationBufferMemory
+from langchain.agents import create_agent
+from langchain_core.tools import Tool
+from langchain_core.messages import HumanMessage, AIMessage
 from typing import List, Dict, Optional, AsyncIterator, Any
 import asyncio
 from app.core.config import settings
 from app.services.knowledge_service import knowledge_service
 from app.services.llm_factory import llm_factory
-from app.services.agent import RolePresetRetriever, PromptBuilder
+from app.services.agent import RolePresetRetriever
 from app.services.memory import MemoryManager
 from app.services.streaming import StreamCallbackHandler
 from app.services.tools import (
@@ -16,6 +15,7 @@ from app.services.tools import (
     pdf_parser_tool,
     knowledge_retrieval_tool
 )
+from app.api.schemas import AgentConfig
 from loguru import logger
 
 
@@ -91,106 +91,161 @@ class AgentService:
     
     def create_agent(
         self, 
-        memory: Optional[ConversationBufferMemory] = None,
-        provider: Optional[str] = None,
-        model: Optional[str] = None,
-        collection: Optional[str] = None,
-        message: Optional[str] = None,
-        search_provider: Optional[str] = None,
-        role_preset_id: Optional[str] = None,
-        db_session = None,
-        llm_instance: Optional[Any] = None
-    ) -> AgentExecutor:
-        """创建Agent执行器
+        config: Optional[AgentConfig] = None,
+        **kwargs  # 保持向后兼容，支持旧的方式传参
+    ) -> Any:
+        """创建Agent
         
         Args:
-            memory: 对话内存
-            provider: LLM提供商
-            model: 模型名称
-            collection: 知识库集合名称
-            message: 用户消息（用于检索角色预设）
-            search_provider: 搜索提供商，可选值: 'tavily', 'baidu', None(默认使用tavily)
-            role_preset_id: 指定的角色预设ID
-            db_session: 数据库会话
-            llm_instance: 可选的LLM实例（如果提供则直接使用）
+            config: Agent配置对象（推荐使用）
+            **kwargs: 向后兼容的旧参数方式（如果提供了config，kwargs将被忽略）
+                - memory: 对话内存
+                - provider: LLM提供商
+                - model: 模型名称
+                - collection: 知识库集合名称
+                - message: 用户消息（用于检索角色预设）
+                - search_provider: 搜索提供商，可选值: 'tavily', 'baidu', None(默认使用tavily)
+                - role_preset_id: 指定的角色预设ID
+                - db_session: 数据库会话
+                - llm_instance: 可选的LLM实例（如果提供则直接使用）
+        
+        Returns:
+            Agent 实例（可直接调用 invoke/ainvoke）
         """
+        # 如果提供了kwargs但没有config，从kwargs创建config（向后兼容）
+        if config is None and kwargs:
+            config = AgentConfig(**kwargs)
+        elif config is None:
+            config = AgentConfig()
         
         # 获取LLM实例（如果未提供）
-        if llm_instance:
-            llm = llm_instance
+        if config.llm_instance:
+            llm = config.llm_instance
         else:
-            llm = self._get_llm(provider, model, streaming=False)
+            llm = self._get_llm(config.provider, config.model, streaming=False)
         
         # 创建工具列表（根据search_provider选择搜索工具）
-        tools = self._create_tools(search_provider=search_provider)
+        tools = self._create_tools(search_provider=config.search_provider)
         
-        # 判断使用哪种Agent类型
-        use_react = provider == 'dashscope' or settings.LLM_PROVIDER == 'dashscope'
-        
-        if use_react:
-            # 使用 ReAct Agent（适用于qwen等中文模型）
-            logger.info("Using ReAct agent for better tool usage")
-            
-            # 获取角色预设提示词
-            role_prompts = RolePresetRetriever.retrieve_prompts(
-                role_preset_id=role_preset_id,
-                collection=collection,
-                message=message,
-                db_session=db_session,
-                top_k=3
-            )
-            
-            # 获取历史对话上下文
-            history_context = MemoryManager.get_history_context(memory, max_messages=20) if memory else ""
-            
-            # 构建提示词
-            prompt = PromptBuilder.build_react_prompt(
-                tools=tools,
-                knowledge_prompts=role_prompts,
-                history_context=history_context
-            )
-            
-            agent = create_react_agent(
-                llm=llm,
-                tools=tools,
-                prompt=prompt
-            )
-        else:
-            # 使用 OpenAI Functions Agent（适用于支持function calling的模型）
-            logger.info("Using OpenAI Functions agent")
-            
-            # 获取角色预设提示词
-            role_prompts = RolePresetRetriever.retrieve_prompts(
-                role_preset_id=role_preset_id,
-                collection=collection,
-                message=message,
-                db_session=db_session,
-                top_k=3
-            )
-            
-            # 构建提示词
-            prompt = PromptBuilder.build_openai_functions_prompt(
-                knowledge_prompts=knowledge_prompts
-            )
-            
-            agent = create_openai_functions_agent(
-                llm=llm,
-                tools=tools,
-                prompt=prompt
-            )
-        
-        # 创建executor
-        agent_executor = AgentExecutor(
-            agent=agent,
-            tools=tools,
-            verbose=True,
-            memory=memory,
-            handle_parsing_errors=True,
-            max_iterations=10,  # 增加迭代次数
-            return_intermediate_steps=True
+        # 获取角色预设提示词
+        role_prompts = RolePresetRetriever.retrieve_prompts(
+            role_preset_id=config.role_preset_id,
+            collection=config.collection,
+            message=config.message,
+            db_session=config.db_session,
+            top_k=3
         )
         
-        return agent_executor
+        # 获取历史对话上下文
+        history_context = MemoryManager.get_history_context(config.memory, max_messages=20) if config.memory else ""
+        
+        # 构建系统提示词
+        system_prompt = f"""你是一个智能AI助手，可以使用工具来帮助回答问题。{role_prompts}{history_context}
+
+🔧 你可以使用的工具:
+• knowledge_base_search - 从内部知识库检索信息（提示词模板、文档、历史记录）
+• web_search - 联网搜索最新信息、新闻、实时数据、天气（可在页面切换Tavily或百度）
+• web_content_fetcher - 获取指定URL的网页内容
+• pdf_parser - 解析PDF文件内容
+• calculator - 执行数学计算
+
+💡 重要提示:
+1. 当用户询问天气、新闻、股价等实时信息时，必须使用 web_search 工具！
+2. 请用中文回答所有问题，确保答案专业、详细、有条理。
+3. 请参考对话历史，理解用户的意图和上下文，保持对话的连贯性。"""
+        
+        # 获取 LangGraph 的存储实例
+        checkpointer = MemoryManager.get_short_term_saver()  # 短期记忆
+        store = MemoryManager.get_long_term_store()  # 长期记忆
+        
+        # 使用统一的 create_agent API，集成 LangGraph 的存储机制
+        logger.info(f"Creating agent with {len(tools)} tools (provider: {config.provider or settings.LLM_PROVIDER})")
+        agent = create_agent(
+            model=llm,
+            tools=tools,
+            system_prompt=system_prompt,
+            checkpointer=checkpointer,  # 使用 InMemorySaver 管理短期记忆
+            store=store  # 使用 InMemoryStore 管理长期记忆
+        )
+        
+        return agent
+    
+    async def create_async_agent(
+        self,
+        config: Optional[AgentConfig] = None,
+        **kwargs  # 保持向后兼容，支持旧的方式传参
+    ) -> Any:
+        """创建异步Agent（用于 ainvoke 调用）
+        
+        Args:
+            config: Agent配置对象（推荐使用）
+            **kwargs: 向后兼容的旧参数方式（如果提供了config，kwargs将被忽略）
+                - provider: LLM提供商
+                - model: 模型名称
+                - collection: 知识库集合名称
+                - message: 用户消息（用于检索角色预设）
+                - search_provider: 搜索提供商，可选值: 'tavily', 'baidu', None(默认使用tavily)
+                - role_preset_id: 指定的角色预设ID
+                - db_session: 数据库会话
+                - llm_instance: 可选的LLM实例（如果提供则直接使用）
+        
+        Returns:
+            Agent 实例（可直接调用 ainvoke）
+        """
+        # 如果提供了kwargs但没有config，从kwargs创建config（向后兼容）
+        if config is None and kwargs:
+            config = AgentConfig(**kwargs)
+        elif config is None:
+            config = AgentConfig()
+        
+        # 获取LLM实例（如果未提供）
+        if config.llm_instance:
+            llm = config.llm_instance
+        else:
+            llm = self._get_llm(config.provider, config.model, streaming=False)
+        
+        # 创建工具列表（根据search_provider选择搜索工具）
+        tools = self._create_tools(search_provider=config.search_provider)
+        
+        # 获取角色预设提示词
+        role_prompts = RolePresetRetriever.retrieve_prompts(
+            role_preset_id=config.role_preset_id,
+            collection=config.collection,
+            message=config.message,
+            db_session=config.db_session,
+            top_k=3
+        )
+        
+        # 构建系统提示词
+        system_prompt = f"""你是一个智能AI助手，可以使用工具来帮助回答问题。{role_prompts}
+
+🔧 你可以使用的工具:
+• knowledge_base_search - 从内部知识库检索信息（提示词模板、文档、历史记录）
+• web_search - 联网搜索最新信息、新闻、实时数据、天气（可在页面切换Tavily或百度）
+• web_content_fetcher - 获取指定URL的网页内容
+• pdf_parser - 解析PDF文件内容
+• calculator - 执行数学计算
+
+💡 重要提示:
+1. 当用户询问天气、新闻、股价等实时信息时，必须使用 web_search 工具！
+2. 请用中文回答所有问题，确保答案专业、详细、有条理。
+3. 请参考对话历史，理解用户的意图和上下文，保持对话的连贯性。"""
+        
+        # 获取 LangGraph 的异步存储实例
+        checkpointer = await MemoryManager.get_short_term_saver()  # 短期记忆
+        store = MemoryManager.get_long_term_store()  # 长期记忆
+        
+        # 使用统一的 create_agent API，集成 LangGraph 的存储机制
+        logger.info(f"Creating async agent with {len(tools)} tools (provider: {config.provider or settings.LLM_PROVIDER})")
+        agent = create_agent(
+            model=llm,
+            tools=tools,
+            system_prompt=system_prompt,
+            checkpointer=checkpointer,  # 使用 AsyncPostgresSaver 管理短期记忆
+            store=store  # 使用 InMemoryStore 管理长期记忆
+        )
+        
+        return agent
     
     def _format_intermediate_steps(self, intermediate_steps: List) -> List[Dict]:
         """格式化中间步骤，使其更易读"""
@@ -224,79 +279,44 @@ class AgentService:
         
         return formatted_steps
     
-    async def chat(
-        self, 
-        message: str, 
-        history: Optional[List[Dict]] = None,
-        collection: Optional[str] = None,
-        provider: Optional[str] = None,
-        model: Optional[str] = None,
-        search_provider: Optional[str] = None,
-        role_preset_id: Optional[str] = None,
-        db_session = None
-    ) -> Dict:
-        """处理对话"""
-        try:
-            # 创建memory并加载历史对话
-            memory = MemoryManager.create_memory(history=history, max_history_length=20)
-            
-            # 创建agent，传入collection和message参数用于检索角色预设
-            agent_executor = self.create_agent(
-                memory, 
-                provider=provider, 
-                model=model, 
-                collection=collection, 
-                message=message,
-                search_provider=search_provider,
-                role_preset_id=role_preset_id,
-                db_session=db_session
-            )
-            
-            # 执行
-            response = await agent_executor.ainvoke({"input": message})
-            
-            # 格式化中间步骤
-            raw_steps = response.get("intermediate_steps", [])
-            formatted_steps = self._format_intermediate_steps(raw_steps)
-            
-            return {
-                "success": True,
-                "response": response["output"],
-                "intermediate_steps": formatted_steps
-            }
-            
-        except Exception as e:
-            logger.error(f"Error in chat: {e}")
-            import traceback
-            logger.error(traceback.format_exc())
-            return {
-                "success": False,
-                "response": f"处理请求时出错: {str(e)}",
-                "intermediate_steps": []
-            }
     
     async def chat_stream(
         self,
         message: str,
-        history: Optional[List[Dict]] = None,
-        collection: Optional[str] = None,
-        provider: Optional[str] = None,
-        model: Optional[str] = None,
-        search_provider: Optional[str] = None,
-        role_preset_id: Optional[str] = None,
-        deep_reasoning: bool = False,
-        db_session = None
+        config: Optional[AgentConfig] = None,
+        **kwargs  # 保持向后兼容，支持旧的方式传参
     ) -> AsyncIterator[Dict]:
-        """流式处理对话"""
+        """流式处理对话
+        
+        Args:
+            message: 用户消息
+            config: Agent配置对象（推荐使用）
+            **kwargs: 向后兼容的旧参数方式（如果提供了config，kwargs将被忽略）
+                - history: 历史对话记录
+                - collection: 知识库集合名称
+                - provider: LLM提供商
+                - model: 模型名称
+                - search_provider: 搜索提供商
+                - role_preset_id: 指定的角色预设ID
+                - deep_reasoning: 深度推理模式
+                - db_session: 数据库会话
+                - thread_id: 线程ID，用于标识不同的会话（用于 LangGraph checkpoint）
+        """
+        # 如果提供了kwargs但没有config，从kwargs创建config（向后兼容）
+        if config is None and kwargs:
+            config = AgentConfig(**kwargs)
+        elif config is None:
+            config = AgentConfig()
+        
         try:
             # 创建memory并加载历史对话
-            memory = MemoryManager.create_memory(history=history, max_history_length=20)
+            #memory = MemoryManager.create_memory(history=config.history, max_history_length=20, thread_id=config.thread_id)
             
             # 创建流式回调处理器
             stream_handler = StreamCallbackHandler()
             
             # 获取LLM实例并启用流式输出
-            llm = self._get_llm(provider, model, streaming=True)
+            llm = self._get_llm(config.provider, config.model, streaming=True)
             
             # 设置回调处理器到LLM上（必须在创建agent之前）
             if hasattr(llm, 'callbacks'):
@@ -306,75 +326,29 @@ class AgentService:
                     llm.callbacks = [stream_handler]
             logger.info(f"LLM callbacks set: {hasattr(llm, 'callbacks')}")
             
-            # 创建agent（使用已设置回调的LLM）
-            # 注意：需要修改create_agent方法以支持传入LLM实例
-            # 临时方案：直接在这里创建agent，而不是调用create_agent
-            from langchain.agents import AgentExecutor, create_react_agent, create_openai_functions_agent
-            from langchain import hub
-            from app.services import knowledge_service
-            from app.core.config import settings
-            
-            # 创建工具列表
-            tools = self._create_tools(search_provider=search_provider)
-            
-            # 获取角色预设提示词
-            role_prompts = RolePresetRetriever.retrieve_prompts(
-                role_preset_id=role_preset_id,
-                collection=collection,
+            # 创建异步agent（使用已设置回调的LLM）
+            agent_config = AgentConfig(
+                provider=config.provider,
+                model=config.model,
+                collection=config.collection,
                 message=message,
-                db_session=db_session,
-                top_k=3
+                search_provider=config.search_provider,
+                role_preset_id=config.role_preset_id,
+                db_session=config.db_session,
+                llm_instance=llm
             )
+            agent = await self.create_async_agent(config=agent_config)
             
-            # 判断使用哪种Agent类型
-            use_react = provider == 'dashscope' or settings.LLM_PROVIDER == 'dashscope'
-            
-            if use_react:
-                # 使用 ReAct Agent
-                from langchain.prompts import PromptTemplate
-                
-                # 构建提示词
-                prompt = PromptBuilder.build_react_prompt_for_stream(
-                    tools=tools,
-                    knowledge_prompts=knowledge_prompts
-                )
-                
-                agent = create_react_agent(llm, tools, prompt)
-            else:
-                # 使用 OpenAI Functions Agent
-                from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
-                from langchain_core.messages import SystemMessage
-                
-                # 构建提示词
-                prompt = PromptBuilder.build_openai_functions_prompt_for_stream(
-                    knowledge_prompts=knowledge_prompts
-                )
-                
-                agent = create_openai_functions_agent(llm, tools, prompt)
-            
-            # 创建executor
-            agent_executor = AgentExecutor(
-                agent=agent,
-                tools=tools,
-                verbose=True,
-                memory=memory,
-                handle_parsing_errors=True,
-                max_iterations=10,
-                return_intermediate_steps=True
-            )
-            
-            # 也设置到agent_executor上
-            if hasattr(agent_executor, 'callbacks'):
-                if agent_executor.callbacks:
-                    agent_executor.callbacks.append(stream_handler)
+            # 设置回调到agent上
+            if hasattr(agent, 'callbacks'):
+                if agent.callbacks:
+                    agent.callbacks.append(stream_handler)
                 else:
-                    agent_executor.callbacks = [stream_handler]
-            logger.info(f"AgentExecutor callbacks set: {hasattr(agent_executor, 'callbacks')}")
+                    agent.callbacks = [stream_handler]
+            logger.info(f"Agent callbacks set: {hasattr(agent, 'callbacks')}")
             
             # 使用ainvoke执行，通过回调处理器捕获流式输出
             try:
-                import asyncio
-                
                 agent_done = False
                 agent_error = None
                 final_result = None
@@ -382,10 +356,39 @@ class AgentService:
                 async def run_agent():
                     nonlocal agent_done, agent_error, final_result
                     try:
+                        # 构建消息列表
+                        messages = []
+                        # 添加当前用户消息
+                        messages.append(HumanMessage(content=message))
+                        
+                        # 构建调用配置（如果提供了 thread_id，使用 LangGraph checkpoint）
+                        invoke_config = {}
+                        if config.thread_id:
+                            invoke_config = {"configurable": {"thread_id": config.thread_id}}
+                        
                         # 直接使用ainvoke，回调处理器会捕获流式token
-                        result = await agent_executor.ainvoke({"input": message})
+                        if invoke_config:
+                            result = await agent.ainvoke({"messages": messages}, config=invoke_config)
+                        else:
+                            result = await agent.ainvoke({"messages": messages})
                         final_result = result
-                        logger.info(f"Agent execution completed, output: {result.get('output', '')[:100]}...")
+                        
+                        # 提取输出
+                        output = ""
+                        if isinstance(result, dict) and "messages" in result:
+                            for msg in reversed(result["messages"]):
+                                if isinstance(msg, AIMessage):
+                                    output = msg.content
+                                    break
+                        elif isinstance(result, dict) and "output" in result:
+                            output = result["output"]
+                        elif isinstance(result, list):
+                            for msg in reversed(result):
+                                if isinstance(msg, AIMessage):
+                                    output = msg.content
+                                    break
+                        
+                        logger.info(f"Agent execution completed, output: {output[:100] if output else 'empty'}...")
                         agent_done = True
                     except Exception as e:
                         logger.error(f"Error in stream chat: {e}")
@@ -441,40 +444,46 @@ class AgentService:
                     if chunk:
                         yield chunk
                 
-                # 发送LLM结束时的剩余推理内容
-                if stream_handler.current_thinking.strip() and not stream_handler.in_final_answer:
-                    yield {
-                        "type": "thinking",
-                        "content": stream_handler.current_thinking.strip()
-                    }
-                
                 # 如果最终结果还没有通过流式发送，发送最终输出
-                if final_result and final_result.get('output'):
-                    output = final_result.get('output', '')
-                    # 检查是否已经通过流式发送了
-                    if not stream_handler.in_final_answer or len(output) > len(stream_handler.current_thinking):
-                        # 如果输出还没有完全发送，发送剩余部分
-                        # 这里简单处理：如果输出很长，可能是最终答案
-                        if "Final Answer:" in output or len(output) > 50:
-                            # 提取最终答案部分
-                            if "Final Answer:" in output:
-                                parts = output.split("Final Answer:", 1)
-                                if len(parts) > 1:
-                                    final_content = parts[1].strip()
-                                    if final_content:
-                                        # 逐字符发送以模拟流式效果
-                                        for char in final_content:
-                                            yield {
-                                                "type": "content",
-                                                "content": char
-                                            }
-                            else:
-                                # 直接发送输出
-                                for char in output:
-                                    yield {
-                                        "type": "content",
-                                        "content": char
-                                    }
+                if final_result:
+                    output = ""
+                    if isinstance(final_result, dict) and "messages" in final_result:
+                        for msg in reversed(final_result["messages"]):
+                            if isinstance(msg, AIMessage):
+                                output = msg.content
+                                break
+                    elif isinstance(final_result, dict) and "output" in final_result:
+                        output = final_result.get('output', '')
+                    elif isinstance(final_result, list):
+                        for msg in reversed(final_result):
+                            if isinstance(msg, AIMessage):
+                                output = msg.content
+                                break
+                    
+                    if output:
+                        # 检查是否已经通过流式发送了
+                        if not stream_handler.in_final_answer or len(output) > len(stream_handler.current_thinking):
+                            # 如果输出还没有完全发送，发送剩余部分
+                            if "Final Answer:" in output or len(output) > 50:
+                                # 提取最终答案部分
+                                if "Final Answer:" in output:
+                                    parts = output.split("Final Answer:", 1)
+                                    if len(parts) > 1:
+                                        final_content = parts[1].strip()
+                                        if final_content:
+                                            # 逐字符发送以模拟流式效果
+                                            for char in final_content:
+                                                yield {
+                                                    "type": "content",
+                                                    "content": char
+                                                }
+                                else:
+                                    # 直接发送输出
+                                    for char in output:
+                                        yield {
+                                            "type": "content",
+                                            "content": char
+                                        }
                 
                 # 检查错误
                 if agent_error:
@@ -494,20 +503,54 @@ class AgentService:
     async def plan_task(
         self, 
         task_description: str,
-        provider: Optional[str] = None,
-        model: Optional[str] = None
+        config: Optional[AgentConfig] = None,
+        **kwargs  # 保持向后兼容，支持旧的方式传参
     ) -> Dict:
-        """任务规划"""
+        """任务规划
+        
+        Args:
+            task_description: 任务描述
+            config: Agent配置对象（推荐使用）
+            **kwargs: 向后兼容的旧参数方式（如果提供了config，kwargs将被忽略）
+                - provider: LLM提供商
+                - model: 模型名称
+        """
+        # 如果提供了kwargs但没有config，从kwargs创建config（向后兼容）
+        if config is None and kwargs:
+            config = AgentConfig(**kwargs)
+        elif config is None:
+            config = AgentConfig()
+        
         try:
-            agent_executor = self.create_agent(provider=provider, model=model)
+            agent_config = AgentConfig(
+                provider=config.provider,
+                model=config.model
+            )
+            agent = await self.create_async_agent(config=agent_config)
             
             prompt = f"请为以下任务制定详细的执行计划：{task_description}"
-            response = await agent_executor.ainvoke({"input": prompt})
+            messages = [HumanMessage(content=prompt)]
+            response = await agent.ainvoke({"messages": messages})
+            
+            # 提取输出
+            output = ""
+            if isinstance(response, dict) and "messages" in response:
+                for msg in reversed(response["messages"]):
+                    if isinstance(msg, AIMessage):
+                        output = msg.content
+                        break
+            elif isinstance(response, dict) and "output" in response:
+                output = response["output"]
+            elif isinstance(response, list):
+                for msg in reversed(response):
+                    if isinstance(msg, AIMessage):
+                        output = msg.content
+                        break
             
             return {
                 "success": True,
-                "plan": response["output"],
-                "steps": self._parse_plan(response["output"])
+                "plan": output,
+                "steps": self._parse_plan(output)
             }
             
         except Exception as e:

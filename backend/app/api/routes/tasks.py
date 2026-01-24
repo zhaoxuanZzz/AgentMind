@@ -5,7 +5,8 @@ from app.db.database import get_db
 from app.db import models
 from app.api.schemas import (
     TaskCreate, TaskResponse,
-    TaskPlanRequest, TaskPlanResponse
+    TaskPlanRequest, TaskPlanResponse,
+    AgentConfig
 )
 from app.services.agent_service import agent_service
 from loguru import logger
@@ -38,11 +39,14 @@ async def create_task(task: TaskCreate, db: Session = Depends(get_db)):
 async def plan_task(request: TaskPlanRequest):
     """为任务生成执行计划"""
     try:
-        llm_config = request.llm_config or {}
+        # 构建AgentConfig配置
+        agent_config = AgentConfig(
+            provider=request.llm_config.provider if request.llm_config else None,
+            model=request.llm_config.model if request.llm_config else None
+        )
         result = await agent_service.plan_task(
             task_description=request.description,
-            provider=llm_config.provider if hasattr(llm_config, 'provider') else None,
-            model=llm_config.model if hasattr(llm_config, 'model') else None
+            config=agent_config
         )
         return TaskPlanResponse(
             success=result["success"],

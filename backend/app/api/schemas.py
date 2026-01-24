@@ -43,6 +43,26 @@ class LLMConfig(BaseModel):
     model: Optional[str] = None
 
 
+# Agent配置 - 封装所有可选的Agent创建参数
+class AgentConfig(BaseModel):
+    """Agent创建配置 - 封装所有可选的配置参数"""
+    memory: Optional[Any] = None
+    provider: Optional[str] = None  # LLM提供商
+    model: Optional[str] = None  # 模型名称
+    collection: Optional[str] = None  # 知识库集合名称
+    message: Optional[str] = None  # 用户消息（用于检索角色预设）
+    search_provider: Optional[str] = None  # 搜索提供商，可选值: 'tavily', 'baidu', None(默认使用tavily)
+    role_preset_id: Optional[str] = None  # 指定的角色预设ID
+    db_session: Any = None  # 数据库会话
+    llm_instance: Optional[Any] = None  # 可选的LLM实例（如果提供则直接使用）
+    history: Optional[List[Dict]] = None  # 历史对话记录
+    thread_id: Optional[str] = None  # 线程ID，用于标识不同的会话（用于 LangGraph checkpoint）
+    deep_reasoning: bool = False  # 深度推理模式
+    
+    class Config:
+        arbitrary_types_allowed = True  # 允许任意类型（如 db_session, memory, llm_instance）
+
+
 class LLMProvider(BaseModel):
     id: str
     name: str

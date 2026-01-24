@@ -1,5 +1,5 @@
 """百度联网搜索工具 - 使用百度千帆搜索API"""
-from langchain.tools import Tool
+from langchain_core.tools import Tool
 from app.core.config import settings
 from loguru import logger
 from typing import Optional

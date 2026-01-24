@@ -1,5 +1,5 @@
 """知识库检索工具"""
-from langchain.tools import Tool
+from langchain_core.tools import Tool
 from app.services.knowledge_service import knowledge_service
 from loguru import logger
 

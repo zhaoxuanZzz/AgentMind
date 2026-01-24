@@ -12,30 +12,25 @@ echo.
 REM Switch to backend directory
 cd /d "%~dp0"
 
-REM Activate virtual environment (supports venv and conda)
+REM Activate virtual environment (supports uv and venv)
 echo [1/3] Activating virtual environment...
 
-REM Check for conda environment
-conda info --envs >nul 2>&1
+REM Check for uv first (preferred)
+where uv >nul 2>&1
 if %errorlevel% equ 0 (
-    REM conda available, try to activate environment
-    echo Detected conda, trying to activate environment...
-    call conda activate agentSys 2>nul
-    if %errorlevel% neq 0 (
-        call conda activate agentsys 2>nul
-        if %errorlevel% neq 0 (
-            echo Warning: agentsys/agentSys environment not found, using current environment...
-        )
-    )
+    REM uv available
+    echo Detected uv, using uv virtual environment...
+    set USE_UV=true
 ) else if exist venv\Scripts\activate.bat (
     REM Use venv
     echo Using venv virtual environment...
     call venv\Scripts\activate.bat
+    set USE_UV=false
 ) else (
     echo WARNING: Virtual environment not found
     echo.
     echo Please create a virtual environment:
-    echo   1. Using conda: conda create -n agentsys python=3.11
+    echo   1. Using uv (recommended): uv venv
     echo   2. Using venv: python -m venv venv
     echo.
     pause
@@ -67,10 +62,15 @@ if not exist .env (
 
 echo.
 echo [2/3] Checking dependencies...
-python -c "import fastapi" 2>nul
-if %errorlevel% neq 0 (
-    echo WARNING: Dependencies not installed, installing...
-    pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
+if "%USE_UV%"=="true" (
+    echo Using uv to sync dependencies...
+    uv sync
+) else (
+    python -c "import fastapi" 2>nul
+    if %errorlevel% neq 0 (
+        echo WARNING: Dependencies not installed, installing...
+        pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
+    )
 )
 
 echo.
@@ -93,5 +93,9 @@ echo.
 echo Press Ctrl+C to stop the server
 echo.
 
-REM Start server (using python -m to ensure correct environment)
-python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+REM Start server
+if "%USE_UV%"=="true" (
+    uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+) else (
+    python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+)

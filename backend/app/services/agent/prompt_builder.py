@@ -1,7 +1,7 @@
 """提示词构建器 - 统一管理提示词模板"""
 from typing import List, Optional
-from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder, PromptTemplate
-from langchain.tools import Tool
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, PromptTemplate
+from langchain_core.tools import Tool
 from loguru import logger
 
 

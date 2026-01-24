@@ -106,7 +106,7 @@ uv tree
 - ✅ 支持 `requirements.txt`（通过 `uv pip install -r requirements.txt`）
 - ✅ 支持 `pyproject.toml`（通过 `uv sync`）
 - ✅ `run-backend.sh` 脚本会自动检测并使用 uv（如果已安装）
-- ✅ 保持与 pip、conda、venv 的兼容性
+- ✅ 保持与 pip、venv 的兼容性
 
 ## 迁移说明
 

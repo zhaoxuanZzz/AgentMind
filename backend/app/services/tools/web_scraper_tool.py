@@ -1,5 +1,5 @@
 """网页抓取和 PDF 解析工具"""
-from langchain.tools import Tool
+from langchain_core.tools import Tool
 from bs4 import BeautifulSoup
 import requests
 from pypdf import PdfReader
