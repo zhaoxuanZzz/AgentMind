@@ -3,6 +3,7 @@ from langchain_core.tools import Tool
 from langchain_core.messages import HumanMessage, AIMessage
 from typing import List, Dict, Optional, AsyncIterator, Any
 import asyncio
+from datetime import datetime
 from app.core.config import settings
 from app.services.knowledge_service import knowledge_service
 from app.services.llm_factory import llm_factory
@@ -475,31 +476,33 @@ class AgentService:
                                             for char in final_content:
                                                 yield {
                                                     "type": "content",
-                                                    "content": char
+                                                    "data": {"content": char},
+                                                    "timestamp": datetime.now().isoformat()
                                                 }
                                 else:
                                     # 直接发送输出
                                     for char in output:
                                         yield {
                                             "type": "content",
-                                            "content": char
+                                            "data": {"content": char},
+                                            "timestamp": datetime.now().isoformat()
                                         }
                 
                 # 检查错误
                 if agent_error:
-                    yield {"type": "error", "message": agent_error}
+                    yield {"type": "error", "data": {"message": agent_error}, "timestamp": datetime.now().isoformat()}
                 else:
-                    yield {"type": "done"}
+                    yield {"type": "done", "data": {}, "timestamp": datetime.now().isoformat()}
                     
             except Exception as e:
                 logger.error(f"Error in stream processing: {e}")
                 import traceback
                 logger.error(traceback.format_exc())
-                yield {"type": "error", "message": str(e)}
+                yield {"type": "error", "data": {"message": str(e)}, "timestamp": datetime.now().isoformat()}
                     
         except Exception as e:
             logger.error(f"Error in chat_stream: {e}")
-            yield {"type": "error", "message": str(e)}
+            yield {"type": "error", "data": {"message": str(e)}, "timestamp": datetime.now().isoformat()}
     async def plan_task(
         self, 
         task_description: str,

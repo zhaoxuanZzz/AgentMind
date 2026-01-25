@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from typing import List
 import json
 import asyncio
+from datetime import datetime
 from app.db.database import get_db
 from app.db import models
 from app.api.schemas import (
@@ -67,7 +68,7 @@ async def chat_stream(request: ChatRequest, db: Session = Depends(get_db)):
                     models.Conversation.id == request.conversation_id
                 ).first()
                 if not conversation:
-                    yield f"data: {json.dumps({'type': 'error', 'message': '对话不存在'}, ensure_ascii=False)}\n\n"
+                    yield f"data: {json.dumps({'type': 'error', 'data': {'message': '对话不存在'}, 'timestamp': datetime.now().isoformat()}, ensure_ascii=False)}\n\n"
                     return
             else:
                 # 创建新对话
@@ -75,7 +76,7 @@ async def chat_stream(request: ChatRequest, db: Session = Depends(get_db)):
                 db.add(conversation)
                 db.commit()
                 db.refresh(conversation)
-                yield f"data: {json.dumps({'type': 'conversation_id', 'conversation_id': conversation.id}, ensure_ascii=False)}\n\n"
+                yield f"data: {json.dumps({'type': 'conversation_id', 'data': {'conversation_id': conversation.id}, 'timestamp': datetime.now().isoformat()}, ensure_ascii=False)}\n\n"
             
             # 获取历史消息
             #history = []
@@ -119,22 +120,41 @@ async def chat_stream(request: ChatRequest, db: Session = Depends(get_db)):
                 message=request.message,
                 config=agent_config
             ):
-                if chunk.get("type") == "thinking":
-                    # 推理过程
-                    thinking_chunk = chunk.get('content', '')
+                chunk_type = chunk.get("type")
+                
+                if chunk_type == "thinking":
+                    # 推理过程 - chunk 已经包含正确的格式（data 和 timestamp）
+                    thinking_chunk = chunk.get('data', {}).get('thinking', '')
                     thinking_content += thinking_chunk  # 累积推理过程
-                    yield f"data: {json.dumps({'type': 'thinking', 'content': thinking_chunk}, ensure_ascii=False)}\n\n"
-                elif chunk.get("type") == "tool":
-                    # 工具调用
-                    tool_info = chunk.get("tool_info", {})
-                    intermediate_steps.append(tool_info)
-                    yield f"data: {json.dumps({'type': 'tool', 'tool_info': tool_info}, ensure_ascii=False)}\n\n"
-                elif chunk.get("type") == "content":
-                    # 最终答案内容
-                    content = chunk.get("content", "")
+                    yield f"data: {json.dumps(chunk, ensure_ascii=False)}\n\n"
+                    
+                elif chunk_type == "tool_call":
+                    # 工具调用 - chunk 已经包含正确的格式
+                    tool_info = chunk.get("data", {})
+                    intermediate_steps.append({
+                        "tool": tool_info.get("tool_name", ""),
+                        "input": str(tool_info.get("tool_input", "")),
+                        "timestamp": chunk.get("timestamp", "")
+                    })
+                    yield f"data: {json.dumps(chunk, ensure_ascii=False)}\n\n"
+                    
+                elif chunk_type == "tool_result":
+                    # 工具结果 - chunk 已经包含正确的格式
+                    tool_data = chunk.get("data", {})
+                    # 更新 intermediate_steps 中对应的工具记录
+                    for step in intermediate_steps:
+                        if step.get("tool") == tool_data.get("tool_name"):
+                            step["output"] = str(tool_data.get("tool_output", ""))
+                            break
+                    yield f"data: {json.dumps(chunk, ensure_ascii=False)}\n\n"
+                    
+                elif chunk_type == "content":
+                    # 最终答案内容 - chunk 已经包含正确的格式
+                    content = chunk.get("data", {}).get("content", "")
                     final_response += content
-                    yield f"data: {json.dumps({'type': 'content', 'content': content}, ensure_ascii=False)}\n\n"
-                elif chunk.get("type") == "done":
+                    yield f"data: {json.dumps(chunk, ensure_ascii=False)}\n\n"
+                    
+                elif chunk_type == "done":
                     # 完成
                     # 保存助手回复，包含推理过程和工具调用
                     assistant_message = models.Message(
@@ -149,14 +169,16 @@ async def chat_stream(request: ChatRequest, db: Session = Depends(get_db)):
                     db.add(assistant_message)
                     db.commit()
                     
-                    yield f"data: {json.dumps({'type': 'done', 'conversation_id': conversation.id}, ensure_ascii=False)}\n\n"
-                elif chunk.get("type") == "error":
-                    yield f"data: {json.dumps({'type': 'error', 'message': chunk.get('message', '')}, ensure_ascii=False)}\n\n"
+                    yield f"data: {json.dumps({'type': 'done', 'data': {'conversation_id': conversation.id}, 'timestamp': datetime.now().isoformat()}, ensure_ascii=False)}\n\n"
+                    
+                elif chunk_type == "error":
+                    error_msg = chunk.get('data', {}).get('message', '') or chunk.get('message', '')
+                    yield f"data: {json.dumps({'type': 'error', 'data': {'message': error_msg}, 'timestamp': datetime.now().isoformat()}, ensure_ascii=False)}\n\n"
                     return
                     
         except Exception as e:
             logger.error(f"Error in stream chat: {e}")
-            yield f"data: {json.dumps({'type': 'error', 'message': str(e)}, ensure_ascii=False)}\n\n"
+            yield f"data: {json.dumps({'type': 'error', 'data': {'message': str(e)}, 'timestamp': datetime.now().isoformat()}, ensure_ascii=False)}\n\n"
     
     return StreamingResponse(generate(), media_type="text/event-stream")
 

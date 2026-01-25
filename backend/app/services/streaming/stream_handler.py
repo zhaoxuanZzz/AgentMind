@@ -1,6 +1,7 @@
 """流式回调处理器"""
 from langchain_core.callbacks import AsyncCallbackHandler
 from typing import List, Dict, Optional
+from datetime import datetime
 from loguru import logger
 
 
@@ -54,12 +55,12 @@ class StreamCallbackHandler(AsyncCallbackHandler):
         tool_input = getattr(action, 'tool_input', '')
         
         self.chunks.append({
-            "type": "tool",
-            "tool_info": {
-                "tool": tool_name,
-                "input": tool_input,
-                "status": "running"
-            }
+            "type": "tool_call",
+            "data": {
+                "tool_name": tool_name,
+                "tool_input": tool_input
+            },
+            "timestamp": datetime.now().isoformat()
         })
         self.current_tool = tool_name
     
@@ -67,12 +68,12 @@ class StreamCallbackHandler(AsyncCallbackHandler):
         """工具执行完成时"""
         if self.current_tool:
             self.chunks.append({
-                "type": "tool",
-                "tool_info": {
-                    "tool": self.current_tool,
-                    "output": str(output)[:500],
-                    "status": "completed"
-                }
+                "type": "tool_result",
+                "data": {
+                    "tool_name": self.current_tool,
+                    "tool_output": str(output)[:500]
+                },
+                "timestamp": datetime.now().isoformat()
             })
             self.current_tool = None
     
@@ -98,7 +99,10 @@ class StreamCallbackHandler(AsyncCallbackHandler):
                     if thinking_part:
                         self.chunks.append({
                             "type": "thinking",
-                            "content": thinking_part
+                            "data": {
+                                "thinking": thinking_part
+                            },
+                            "timestamp": datetime.now().isoformat()
                         })
                     # 处理最终答案部分
                     self.buffer = parts[1]
@@ -115,7 +119,10 @@ class StreamCallbackHandler(AsyncCallbackHandler):
                 if content:
                     self.chunks.append({
                         "type": "content",
-                        "content": content
+                        "data": {
+                            "content": content
+                        },
+                        "timestamp": datetime.now().isoformat()
                     })
                     self.buffer = ""
         else:
@@ -127,7 +134,10 @@ class StreamCallbackHandler(AsyncCallbackHandler):
                 if self.current_thinking.strip():
                     self.chunks.append({
                         "type": "thinking",
-                        "content": self.current_thinking
+                        "data": {
+                            "thinking": self.current_thinking
+                        },
+                        "timestamp": datetime.now().isoformat()
                     })
                     self.current_thinking = ""
     
@@ -146,7 +156,10 @@ class StreamCallbackHandler(AsyncCallbackHandler):
         if self.current_thinking.strip() and not self.in_final_answer:
             self.chunks.append({
                 "type": "thinking",
-                "content": self.current_thinking.strip()
+                "data": {
+                    "thinking": self.current_thinking.strip()
+                },
+                "timestamp": datetime.now().isoformat()
             })
             self.current_thinking = ""
             # 清空buffer，因为current_thinking已经包含了最后一部分未发送的内容
@@ -158,13 +171,19 @@ class StreamCallbackHandler(AsyncCallbackHandler):
                 if content:
                     self.chunks.append({
                         "type": "content",
-                        "content": content
+                        "data": {
+                            "content": content
+                        },
+                        "timestamp": datetime.now().isoformat()
                     })
             else:
                 if self.buffer.strip():
                     self.chunks.append({
                         "type": "thinking",
-                        "content": self.buffer.strip()
+                        "data": {
+                            "thinking": self.buffer.strip()
+                        },
+                        "timestamp": datetime.now().isoformat()
                     })
             self.buffer = ""
 
