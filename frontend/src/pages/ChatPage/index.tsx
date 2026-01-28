@@ -153,7 +153,7 @@ const ChatPage: React.FC = () => {
         onClose={() => setDrawerVisible(false)}
         open={drawerVisible}
         styles={{ body: { padding: 0 } }}
-        width={280}
+        size={280}
       >
         {sidebarContent}
       </Drawer>

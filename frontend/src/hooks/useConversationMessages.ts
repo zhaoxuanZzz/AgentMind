@@ -103,7 +103,8 @@ export function useConversationMessages(
       clearMessages()
       setLastLoadedConversationId(null)
     } else if (conversationId !== lastLoadedConversationId) {
-      // 切换到不同的会话，直接加载消息
+      // 切换到不同的会话，主动加载历史消息
+      // 这样可以确保切换到已存在的会话时能看到历史消息
       loadMessages(conversationId)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

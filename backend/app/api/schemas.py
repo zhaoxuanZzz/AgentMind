@@ -192,12 +192,11 @@ class MessageResponse(BaseModel):
     role: str
     content: str
     meta_info: Optional[Dict] = None
-    chunks: Optional[List[Dict[str, Any]]] = None
     thinking: Optional[str] = None
     intermediate_steps: Optional[List[Dict[str, Any]]] = None
     created_at: datetime
     
-    @field_validator('chunks', 'intermediate_steps', mode='before')
+    @field_validator('intermediate_steps', mode='before')
     @classmethod
     def parse_json_fields(cls, v):
         """解析JSON字段（如果是字符串则转换为对象）"""

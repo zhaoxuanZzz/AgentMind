@@ -74,7 +74,7 @@ function AppContent() {
           <Suspense 
             fallback={
               <div style={{ height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                <Spin size="large" tip="加载模块中..." />
+                <Spin size="large" spinning tip="加载模块中..." />
               </div>
             }
           >
