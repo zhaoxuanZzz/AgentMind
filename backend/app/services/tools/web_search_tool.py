@@ -41,26 +41,53 @@ def _tavily_search(query: str) -> str:
         if not results:
             return "未找到相关搜索结果"
         
-        # 确保results是列表类型
-        if not isinstance(results, list):
-            if hasattr(results, '__iter__'):
-                results = list(results)
+        # 处理Tavily返回的数据结构
+        # 新版本的langchain-tavily可能返回字典包含results字段
+        search_results = []
+        if isinstance(results, dict):
+            # 如果是字典，提取results字段（如果存在）
+            if 'results' in results:
+                search_results = results['results']
             else:
-                logger.error(f"Tavily search returned unexpected type: {type(results)}")
-                return "搜索返回格式错误"
+                # 可能是单个结果，包装成列表
+                logger.warning(f"Tavily returned dict without 'results' key. Keys: {list(results.keys())}")
+                # 尝试查找其他可能的字段
+                for key in ['data', 'items', 'search_results']:
+                    if key in results and isinstance(results[key], list):
+                        search_results = results[key]
+                        break
+                if not search_results:
+                    # 如果没有找到数组字段，将整个字典当作单个结果
+                    logger.info("Treating dict response as single result")
+                    search_results = [results]
+        elif isinstance(results, list):
+            search_results = results
+        else:
+            logger.error(f"Tavily search returned unexpected type: {type(results)}")
+            return f"搜索返回格式错误: {type(results)}"
         
         # 格式化结果，限制最多5条
         formatted_results = []
-        max_results = min(len(results), 5)
+        max_results = min(len(search_results), 5)
         
         for idx in range(max_results):
-            result = results[idx]
-            title = result.get("title", "无标题") if isinstance(result, dict) else str(result)
-            url = result.get("url", "") if isinstance(result, dict) else ""
-            content = result.get("content", "") if isinstance(result, dict) else ""
+            result = search_results[idx]
             
             if not isinstance(result, dict):
-                content = str(result) if not content else content
+                logger.warning(f"Result {idx} is not a dict: {type(result)}")
+                continue
+            
+            title = result.get("title", "无标题")
+            url = result.get("url", "")
+            # 优先使用content，其次snippet，再次description
+            content = result.get("content", "") or result.get("snippet", "") or result.get("description", "")
+            
+            if not content:
+                content = "暂无摘要"
+            
+            # 限制内容长度
+            if len(content) > 300:
+                content = content[:300] + "..."
             
             formatted_results.append(
                 f"[{idx + 1}] {title}\n"
@@ -263,14 +290,16 @@ def _baidu_search(query: str) -> str:
         return f"搜索出错: {str(e)}"
 
 
-def create_web_search_tool(search_provider: Optional[str] = None) -> Optional[Tool]:
-    """创建统一的联网搜索工具
+def create_web_search_tool() -> Optional[Tool]:
+    """创建统一的联网搜索工具（从环境变量读取提供商配置）"""
+    # 从配置读取搜索提供商
+    provider = settings.SEARCH_PROVIDER.lower() if settings.SEARCH_PROVIDER else 'tavily'
     
-    Args:
-        search_provider: 搜索提供商，可选值: 'tavily', 'baidu', None(默认使用tavily)
-    """
+    # 从配置读取搜索提供商
+    provider = settings.SEARCH_PROVIDER.lower() if settings.SEARCH_PROVIDER else 'tavily'
+    
     # 确定使用的搜索提供商
-    if search_provider == 'baidu':
+    if provider == 'baidu':
         provider = 'baidu'
         # 检查百度是否可用
         if not settings.BAIDU_ENABLED or not settings.BAIDU_API_KEY:

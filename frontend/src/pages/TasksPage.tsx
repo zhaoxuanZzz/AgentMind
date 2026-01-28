@@ -137,7 +137,7 @@ const TasksPage = () => {
               </div>
               {response.steps.length > 0 && (
                 <Timeline
-                  items={response.steps.map((step, idx) => ({
+                  items={response.steps.map((step) => ({
                     children: step.description,
                     color: 'blue',
                   }))}
@@ -320,7 +320,7 @@ const TasksPage = () => {
                           <div style={{ marginTop: 20 }}>
                             <h4>执行步骤:</h4>
                             <Timeline
-                              items={selectedTask.plan.steps.map((step: TaskStep, idx: number) => ({
+                              items={selectedTask.plan.steps.map((step: TaskStep) => ({
                                 children: (
                                   <div>
                                     <div>{step.description}</div>

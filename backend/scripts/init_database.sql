@@ -14,6 +14,8 @@ SET timezone = 'UTC';
 -- ============================================
 -- 注意：生产环境请谨慎使用，会删除所有数据！
 
+DROP TABLE IF EXISTS conversation_configs CASCADE;
+DROP TABLE IF EXISTS global_settings CASCADE;
 DROP TABLE IF EXISTS messages CASCADE;
 DROP TABLE IF EXISTS conversations CASCADE;
 DROP TABLE IF EXISTS documents CASCADE;
@@ -48,6 +50,9 @@ CREATE TABLE messages (
     conversation_id INTEGER NOT NULL,
     role VARCHAR(20) NOT NULL,
     content TEXT NOT NULL,
+    chunks JSONB,  -- 新增：结构化消息块（新格式）
+    thinking TEXT,  -- 新增：AI思考过程（向后兼容）
+    intermediate_steps JSONB,  -- 新增：工具调用中间步骤（向后兼容）
     meta_info JSONB,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_messages_conversation 
@@ -66,6 +71,9 @@ COMMENT ON COLUMN messages.id IS '消息ID，主键';
 COMMENT ON COLUMN messages.conversation_id IS '所属会话ID，外键';
 COMMENT ON COLUMN messages.role IS '消息角色：user, assistant, system';
 COMMENT ON COLUMN messages.content IS '消息内容';
+COMMENT ON COLUMN messages.chunks IS '结构化消息块（新格式），JSON数组，支持多种消息类型（text/thinking/tool/plan/system）';
+COMMENT ON COLUMN messages.thinking IS 'AI思考过程（向后兼容）';
+COMMENT ON COLUMN messages.intermediate_steps IS '工具调用中间步骤（向后兼容），JSON格式';
 COMMENT ON COLUMN messages.meta_info IS '元信息，JSON格式，存储额外信息如检索的知识等';
 COMMENT ON COLUMN messages.created_at IS '创建时间';
 
@@ -146,7 +154,69 @@ COMMENT ON COLUMN tasks.id IS '任务ID，主键';
 COMMENT ON COLUMN tasks.title IS '任务标题';
 COMMENT ON COLUMN tasks.description IS '任务描述';
 COMMENT ON COLUMN tasks.status IS '任务状态：pending, planned, in_progress, completed, failed';
-COMMENT ON COLUMN tasks.plan IS '任务计划，JSON格式，存储规划的步骤';
+COMMENT ON COLUMN tasks.plan IS '任务计划，JSON格式，
+
+-- 2.6 会话配置表（002功能新增）
+CREATE TABLE conversation_configs (
+    id SERIAL PRIMARY KEY,
+    conversation_id INTEGER UNIQUE NOT NULL,
+    role_id VARCHAR(100),
+    plan_mode_enabled BOOLEAN,  -- NULL表示使用全局默认
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_conversation_configs_conversation 
+        FOREIGN KEY (conversation_id) 
+        REFERENCES conversations(id) 
+        ON DELETE CASCADE
+);
+
+-- 创建索引
+CREATE INDEX idx_conversation_configs_conversation_id ON conversation_configs(conversation_id);
+
+COMMENT ON TABLE conversation_configs IS '会话配置表，存储会话级别的角色和计划模式配置';
+COMMENT ON COLUMN conversation_configs.id IS '配置ID，主键';
+COMMENT ON COLUMN conversation_configs.conversation_id IS '所属会话ID，外键，唯一';
+COMMENT ON COLUMN conversation_configs.role_id IS '角色预设ID（如software_engineer），NULL表示使用全局默认';
+COMMENT ON COLUMN conversation_configs.plan_mode_enabled IS '计划模式是否启用，NULL表示使用全局默认';
+COMMENT ON COLUMN conversation_configs.created_at IS '创建时间';
+COMMENT ON COLUMN conversation_configs.updated_at IS '更新时间';
+
+-- 2.7 全局设置表（002功能新增）
+CREATE TABLE global_settings (
+
+CREATE TRIGGER update_conversation_configs_updated_at 
+    BEFORE UPDATE ON conversation_configs 
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_global_settings_updated_at 
+    BEFORE UPDATE ON global_settings 
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER,
+    setting_key VARCHAR(100) UNIQUE NOT NULL,
+    setting_value TEXT,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 创建索引
+CREATE INDEX idx_global_settings_key ON global_settings(setting_key);
+CREATE INDEX idx_global_settings_user_id ON global_settings(user_id);
+
+COMMENT ON TABLE global_settings IS '全局设置表，存储用户级别的默认配置';
+COMMENT ON COLUMN global_settings.id IS '设置ID，主键';
+COMMENT ON COLUMN global_settings.user_id IS '用户ID（暂未使用，预留多用户支持）';
+COMMENT ON COLUMN global_settings.setting_key IS '设置键名，唯一（如default_role_id、default_plan_mode）';
+COMMENT ON COLUMN global_settings.setting_value IS
+
+-- 4.4 初始化全局设置默认值（必需）
+INSERT INTO global_settings (setting_key, setting_value) 
+VALUES 
+    ('default_role_id', '"software_engineer"'),
+    ('default_plan_mode', 'false')
+ON CONFLICT (setting_key) DO NOTHING; '设置值，JSON格式存储';
+COMMENT ON COLUMN global_settings.created_at IS '创建时间';
+COMMENT ON COLUMN global_settings.updated_at IS '更新时间';存储规划的步骤';
 COMMENT ON COLUMN tasks.result IS '任务结果，JSON格式，存储执行结果';
 COMMENT ON COLUMN tasks.created_at IS '创建时间';
 COMMENT ON COLUMN tasks.updated_at IS '更新时间';

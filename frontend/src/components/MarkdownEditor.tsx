@@ -166,7 +166,6 @@ const MarkdownEditor = ({ value = '', onChange, placeholder, rows = 10 }: Markdo
     }
     
     const start = textarea.selectionStart
-    const end = textarea.selectionEnd
     const beforeText = content.substring(0, start)
     const needsNewlineBefore = beforeText.length > 0 && !beforeText.endsWith('\n')
     

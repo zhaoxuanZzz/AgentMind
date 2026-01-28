@@ -9,35 +9,9 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
-  /* Future Agent System Theme Colors (Dark Default) */
-  --agent-bg-color: #0B0F19;
-  --agent-bg-gradient: linear-gradient(to bottom right, #0f172a, #000000);
-  
-  --agent-primary-color: #00F0FF; /* Cyber Cyan */
-  --agent-accent-color: #7000FF; /* Electric Purple */
-  --agent-success-color: #00ff9d;
-  --agent-warning-color: #ffbe0b;
-  --agent-error-color: #ff0055;
-  
-  --agent-text-color: #F8FAFC; /* Titanium White */
-  --agent-text-secondary: #94A3B8; /* Blue Gray */
-  
-  --agent-glass-bg: rgba(255, 255, 255, 0.03);
-  --agent-glass-border: rgba(255, 255, 255, 0.1);
-  --agent-glass-blur: blur(10px);
-  
-  --agent-card-hover-shadow: 0 0 20px rgba(0, 240, 255, 0.15);
-  --agent-card-hover-border: rgba(0, 240, 255, 0.5);
-
-  --agent-header-bg: rgba(11, 15, 25, 0.8);
-  --agent-border-color: rgba(255, 255, 255, 0.1);
-  --agent-input-bg: rgba(0, 0, 0, 0.2);
-}
-
-/* Light Theme Variables */
-[data-theme='light'] {
-  --agent-bg-color: #f0f2f5;
-  --agent-bg-gradient: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  /* Light Theme Variables - Default */
+  --agent-bg-color: #f5f7fa;
+  --agent-bg-gradient: linear-gradient(135deg, #f5f7fa 0%, #f0f2f5 100%);
   
   --agent-primary-color: #1677ff;
   --agent-accent-color: #722ed1;
@@ -48,16 +22,42 @@
   --agent-text-color: #1f1f1f;
   --agent-text-secondary: #666666;
   
-  --agent-glass-bg: rgba(255, 255, 255, 0.7);
+  --agent-glass-bg: rgba(250, 250, 250, 0.85);
   --agent-glass-border: rgba(0, 0, 0, 0.06);
   --agent-glass-blur: blur(10px);
   
   --agent-card-hover-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
   --agent-card-hover-border: #1677ff;
 
-  --agent-header-bg: rgba(255, 255, 255, 0.8);
+  --agent-header-bg: rgba(250, 250, 250, 0.9);
   --agent-border-color: rgba(0, 0, 0, 0.06);
-  --agent-input-bg: #ffffff;
+  --agent-input-bg: #fafafa;
+}
+
+/* Light Theme Variables */
+[data-theme='light'] {
+  --agent-bg-color: #f5f7fa;
+  --agent-bg-gradient: linear-gradient(135deg, #f5f7fa 0%, #f0f2f5 100%);
+  
+  --agent-primary-color: #1677ff;
+  --agent-accent-color: #722ed1;
+  --agent-success-color: #52c41a;
+  --agent-warning-color: #faad14;
+  --agent-error-color: #ff4d4f;
+  
+  --agent-text-color: #1f1f1f;
+  --agent-text-secondary: #666666;
+  
+  --agent-glass-bg: rgba(250, 250, 250, 0.85);
+  --agent-glass-border: rgba(0, 0, 0, 0.06);
+  --agent-glass-blur: blur(10px);
+  
+  --agent-card-hover-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  --agent-card-hover-border: #1677ff;
+
+  --agent-header-bg: rgba(250, 250, 250, 0.9);
+  --agent-border-color: rgba(0, 0, 0, 0.06);
+  --agent-input-bg: #fafafa;
 }
 
 * {

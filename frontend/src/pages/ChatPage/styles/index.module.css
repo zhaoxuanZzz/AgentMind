@@ -1,0 +1,90 @@
+.container {
+  display: flex;
+  height: 100%;
+  width: 100%;
+  background-color: var(--bg-secondary);
+  overflow: hidden;
+  position: relative;
+}
+
+/* 侧边栏容器 */
+.sidebar {
+  width: 280px;
+  height: 100%;
+  background-color: var(--bg-primary);
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  transition: width var(--transition-base);
+  z-index: 10;
+}
+
+.sidebarHidden {
+  width: 0;
+  border-right: none;
+  overflow: hidden;
+}
+
+/* 聊天主区域 */
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-width: 0; /* 防止 flex 子项溢出 */
+  position: relative;
+  background-color: var(--bg-secondary);
+}
+
+/* 消息列表区域 */
+.messageListContainer {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--spacing-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  scroll-behavior: smooth;
+}
+
+/* 输入框区域 */
+.senderContainer {
+  padding: var(--spacing-lg);
+  background-color: var(--bg-secondary);
+  border-top: 1px solid var(--border-color-light);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.senderWrapper {
+  width: 100%;
+  max-width: 800px;
+  position: relative;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  /* Sidebar 样式由 Drawer 接管，这里只需处理内部元素适配 */
+  
+  .messageListContainer {
+    padding: var(--spacing-md);
+  }
+
+  .senderContainer {
+    padding: var(--spacing-sm);
+  }
+  
+  /* 在移动端，输入框不需要那么大的 padding */
+  .senderWrapper {
+    max-width: 100%;
+  }
+}
+
+/* 适配移动端消息气泡最大宽度 */
+@media (max-width: 576px) {
+  .senderContainer {
+    padding: 8px; /* 更紧凑 */
+  }
+}

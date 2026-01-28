@@ -8,12 +8,15 @@
 ## 摘要
 
 重构 AgentMind 前端应用，采用 `@ant-design/x-sdk` 作为核心 AI 对话流处理库。主要改进包括：
+
 1. 使用 XRequest 替代 EventSource 处理流式响应
 2. 采用清新淡雅浅色主题（白色+浅蓝色）
 3. 组件化重构，将 1298 行的 ChatPage.tsx 拆分为中等粒度的功能模块
 4. 新增思考过程和工具调用可视化
 5. 实现流畅的动画效果和响应式设计
 6. 分阶段性能优化（基础优化优先，虚拟滚动 Phase 4）
+
+**详细功能需求**: 见 [spec.md](./spec.md) 第 2 章节
 
 ## 技术背景
 
@@ -31,10 +34,14 @@
 **目标平台**：现代浏览器（Chrome 90+、Firefox 88+、Safari 14+、Edge 90+）、移动端（375px+）  
 **项目类型**：Web 应用 - 前端重构（后端 FastAPI 保持不变）  
 **性能目标**：
-  - 首屏加载 < 2s（3G 网络）
+  - 首屏加载 < 2s（3G 网络，Lighthouse FCP）
   - 流式响应延迟 < 100ms
   - 动画帧率 60 FPS
   - 支持 1000+ 消息列表（Phase 4 虚拟滚动）
+  - **可访问性验证（WCAG AA 标准）**：
+    - 文字对比度 >= 4.5:1
+    - 完整的键盘导航支持
+    - 屏幕阅读器兼容性（使用 axe DevTools 验证）
   
 **约束**：
   - 必须兼容现有后端 API（/api/chat/stream）
@@ -55,10 +62,10 @@
 验证是否符合 AgentMind 宪章（v1.0.0）：
 
 - [x] **模块化服务设计**：✅ 前端组件采用中等粒度拆分，每个组件单一职责（UserMessage、AIMessage、ThinkingProcess 等），可独立测试
-- [⚠️] **API 优先开发**：⚠️ 部分适用 - 前端消费现有后端 API，但需定义流式数据格式接口（StreamChunk）作为契约
+- [⚠️] **API 优先开发**：⚠️ 部分适用 - 前端消费现有后端 API，TypeScript 接口作为前端契约。**后端契约已在 contracts/backend-api-requirements.md 中明确定义，需后端团队确认并实施**
 - [N/A] **依赖管理**：N/A - 前端使用 npm/package.json，不适用 uv（后端工具）
-- [x] **类型安全**：✅ TypeScript 严格模式，所有组件和 Hooks 使用完整类型定义
-- [⚠️] **可观测性**：⚠️ 部分适用 - 前端使用浏览器 console 日志，关键交互点（XRequest callbacks、错误边界）包含日志
+- [x] **类型安全**：✅ TypeScript 严格模式，所有组件和 Hooks 使用完整类型定义。**建议在 API 客户端添加运行时 schema 验证（使用 zod）以增强类型安全**
+- [⚠️] **可观测性**：⚠️ 部分适用 - 前端使用浏览器 console 日志，关键交互点（XRequest callbacks、错误边界）包含日志。**建议在生产环境引入结构化日志库（如 loglevel）和错误上报服务（如 Sentry）**
 
 **违规项（如有）**：
 

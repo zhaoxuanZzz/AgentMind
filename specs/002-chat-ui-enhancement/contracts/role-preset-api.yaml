@@ -1,0 +1,166 @@
+openapi: 3.0.3
+info:
+  title: Role Preset API
+  description: 角色预设管理API
+  version: 1.0.0
+
+paths:
+  /api/roles:
+    get:
+      summary: 获取所有角色预设列表
+      description: 返回所有可用的角色预设
+      operationId: listRoles
+      tags:
+        - Roles
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - roles
+                properties:
+                  roles:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RolePresetResponse'
+              example:
+                roles:
+                  - id: "software_engineer"
+                    name: "软件工程师"
+                    description: "专注于代码开发、架构设计和技术问题解决"
+                    icon: "👨‍💻"
+                    is_active: true
+                  - id: "product_manager"
+                    name: "产品经理"
+                    description: "专注于产品规划、需求分析和用户体验"
+                    icon: "📊"
+                    is_active: true
+
+  /api/roles/{role_id}:
+    get:
+      summary: 获取特定角色预设详情
+      description: 返回指定角色的完整信息
+      operationId: getRole
+      tags:
+        - Roles
+      parameters:
+        - name: role_id
+          in: path
+          required: true
+          schema:
+            type: string
+            enum:
+              - software_engineer
+              - product_manager
+              - marketing
+              - translator
+              - research_assistant
+          description: 角色ID
+          example: "software_engineer"
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RolePresetDetailResponse'
+              example:
+                id: "software_engineer"
+                name: "软件工程师"
+                description: "专注于代码开发、架构设计和技术问题解决"
+                system_prompt: "你是一位资深软件工程师，擅长：\n- 编写高质量、可维护的代码\n- 设计清晰的系统架构..."
+                config:
+                  temperature: 0.3
+                  max_tokens: 4096
+                icon: "👨‍💻"
+                is_active: true
+                created_at: "2026-01-26T10:00:00Z"
+        '404':
+          description: 角色不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                detail: "Role not found: invalid_role"
+
+components:
+  schemas:
+    RolePresetResponse:
+      type: object
+      required:
+        - id
+        - name
+        - description
+        - is_active
+      properties:
+        id:
+          type: string
+          description: 角色唯一标识符
+          example: "software_engineer"
+        name:
+          type: string
+          description: 角色显示名称
+          example: "软件工程师"
+        description:
+          type: string
+          description: 角色描述
+          example: "专注于代码开发、架构设计和技术问题解决"
+        icon:
+          type: string
+          nullable: true
+          description: 角色图标（emoji或URL）
+          example: "👨‍💻"
+        is_active:
+          type: boolean
+          description: 是否启用
+          example: true
+
+    RolePresetDetailResponse:
+      allOf:
+        - $ref: '#/components/schemas/RolePresetResponse'
+        - type: object
+          required:
+            - system_prompt
+            - config
+            - created_at
+          properties:
+            system_prompt:
+              type: string
+              description: 系统提示词（完整内容）
+              example: "你是一位资深软件工程师，擅长..."
+            config:
+              type: object
+              description: LLM配置参数
+              properties:
+                temperature:
+                  type: number
+                  format: float
+                  minimum: 0
+                  maximum: 2
+                  description: 温度参数
+                  example: 0.3
+                max_tokens:
+                  type: integer
+                  minimum: 1
+                  description: 最大token数
+                  example: 4096
+              additionalProperties: true
+            created_at:
+              type: string
+              format: date-time
+              description: 创建时间
+              example: "2026-01-26T10:00:00Z"
+
+    ErrorResponse:
+      type: object
+      required:
+        - detail
+      properties:
+        detail:
+          type: string
+          description: 错误详情
+          example: "Role not found"

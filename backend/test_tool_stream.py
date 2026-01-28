@@ -13,8 +13,7 @@ def test_tool_call_stream():
         "llm_config": {
             "provider": "dashscope",
             "model": "qwen-turbo"
-        },
-        "search_provider": "tavily"
+        }
     }
     
     print("发送请求:", payload)

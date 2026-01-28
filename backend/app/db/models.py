@@ -25,6 +25,14 @@ class Message(Base):
     role = Column(String(20), nullable=False)  # user, assistant, system
     content = Column(Text, nullable=False)
     meta_info = Column(JSON, nullable=True)  # 存储额外信息，如检索的知识等
+    
+    # 新增字段：消息块列表（JSONB格式，存储结构化消息）
+    chunks = Column(JSON, nullable=True)  # 存储 MessageChunk 列表
+    
+    # 向后兼容字段
+    thinking = Column(Text, nullable=True)  # 旧的思考过程字段
+    intermediate_steps = Column(JSON, nullable=True)  # 旧的中间步骤字段
+    
     created_at = Column(DateTime, default=datetime.utcnow)
     
     conversation = relationship("Conversation", back_populates="messages")
@@ -86,3 +94,30 @@ class RolePreset(Base):
     tags = Column(JSON, nullable=True)  # 标签列表，存储为JSON数组
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class ConversationConfig(Base):
+    """会话配置表 - 存储每个对话的特定配置"""
+    __tablename__ = "conversation_configs"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    conversation_id = Column(Integer, ForeignKey("conversations.id"), unique=True, nullable=False)
+    role_id = Column(String(100), nullable=True)  # 角色预设ID，null表示使用全局默认
+    plan_mode_enabled = Column(Integer, nullable=True)  # 1=true, 0=false, null=使用全局默认（SQLite用Integer）
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    conversation = relationship("Conversation", backref="config", uselist=False)
+
+
+class GlobalSettings(Base):
+    """全局设置表 - 存储用户的全局默认设置"""
+    __tablename__ = "global_settings"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, nullable=True)  # 未来支持多用户，当前单用户可为null
+    setting_key = Column(String(100), nullable=False, unique=True, index=True)  # 设置键
+    setting_value = Column(Text, nullable=True)  # 设置值（JSON字符串）
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+

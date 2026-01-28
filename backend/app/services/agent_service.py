@@ -38,12 +38,8 @@ class AgentService:
             return llm_factory.create_llm(streaming=True)
         return self.llm
         
-    def _create_tools(self, search_provider: Optional[str] = None) -> List[Tool]:
-        """创建Agent可用的工具
-        
-        Args:
-            search_provider: 搜索提供商，可选值: 'tavily', 'baidu', None(默认使用tavily)
-        """
+    def _create_tools(self) -> List[Tool]:
+        """创建Agent可用的工具"""
         
         def calculator_tool(expression: str) -> str:
             """计算数学表达式"""
@@ -71,11 +67,11 @@ class AgentService:
         if knowledge_retrieval_tool:
             tools.append(knowledge_retrieval_tool)
         
-        # 创建统一的联网搜索工具（根据search_provider选择Tavily或百度）
-        web_search = create_web_search_tool(search_provider=search_provider)
+        # 创建统一的联网搜索工具（从配置读取提供商）
+        web_search = create_web_search_tool()
         if web_search:
             tools.append(web_search)
-            logger.info(f"Added web search tool (provider: {search_provider or 'tavily'})")
+            logger.info(f"Added web search tool (provider: {settings.SEARCH_PROVIDER})")
         else:
             logger.warning("Web search tool not available")
         
@@ -87,7 +83,7 @@ class AgentService:
         if pdf_parser_tool:
             tools.append(pdf_parser_tool)
         
-        logger.info(f"Created {len(tools)} tools for agent (search provider: {search_provider or 'tavily'})")
+        logger.info(f"Created {len(tools)} tools for agent (search provider: {settings.SEARCH_PROVIDER})")
         return tools
     
     def create_agent(
@@ -105,7 +101,7 @@ class AgentService:
                 - model: 模型名称
                 - collection: 知识库集合名称
                 - message: 用户消息（用于检索角色预设）
-                - search_provider: 搜索提供商，可选值: 'tavily', 'baidu', None(默认使用tavily)
+
                 - role_preset_id: 指定的角色预设ID
                 - db_session: 数据库会话
                 - llm_instance: 可选的LLM实例（如果提供则直接使用）
@@ -125,8 +121,8 @@ class AgentService:
         else:
             llm = self._get_llm(config.provider, config.model, streaming=False)
         
-        # 创建工具列表（根据search_provider选择搜索工具）
-        tools = self._create_tools(search_provider=config.search_provider)
+        # 创建工具列表（从环境变量读取搜索提供商）
+        tools = self._create_tools()
         
         # 获取角色预设提示词
         role_prompts = RolePresetRetriever.retrieve_prompts(
@@ -185,7 +181,6 @@ class AgentService:
                 - model: 模型名称
                 - collection: 知识库集合名称
                 - message: 用户消息（用于检索角色预设）
-                - search_provider: 搜索提供商，可选值: 'tavily', 'baidu', None(默认使用tavily)
                 - role_preset_id: 指定的角色预设ID
                 - db_session: 数据库会话
                 - llm_instance: 可选的LLM实例（如果提供则直接使用）
@@ -205,8 +200,8 @@ class AgentService:
         else:
             llm = self._get_llm(config.provider, config.model, streaming=False)
         
-        # 创建工具列表（根据search_provider选择搜索工具）
-        tools = self._create_tools(search_provider=config.search_provider)
+        # 创建工具列表（从环境变量读取搜索提供商）
+        tools = self._create_tools()
         
         # 获取角色预设提示词
         role_prompts = RolePresetRetriever.retrieve_prompts(
@@ -297,7 +292,7 @@ class AgentService:
                 - collection: 知识库集合名称
                 - provider: LLM提供商
                 - model: 模型名称
-                - search_provider: 搜索提供商
+
                 - role_preset_id: 指定的角色预设ID
                 - deep_reasoning: 深度推理模式
                 - db_session: 数据库会话
@@ -333,7 +328,6 @@ class AgentService:
                 model=config.model,
                 collection=config.collection,
                 message=message,
-                search_provider=config.search_provider,
                 role_preset_id=config.role_preset_id,
                 db_session=config.db_session,
                 llm_instance=llm
@@ -410,6 +404,7 @@ class AgentService:
                     if stream_handler.has_new_data():
                         chunk = stream_handler.get_latest_chunk()
                         if chunk:
+                            logger.debug(f"Yielding chunk: type={chunk.get('type')}, data={str(chunk.get('data', {}))[:50]}")
                             yield chunk
                             last_activity = asyncio.get_event_loop().time()
                             empty_loops = 0
@@ -440,9 +435,11 @@ class AgentService:
                     logger.error(f"Agent task error: {e}")
                 
                 # 发送剩余内容
+                logger.debug(f"Agent done, flushing remaining chunks. Has data: {stream_handler.has_new_data()}")
                 while stream_handler.has_new_data():
                     chunk = stream_handler.get_latest_chunk()
                     if chunk:
+                        logger.debug(f"Yielding remaining chunk: type={chunk.get('type')}")
                         yield chunk
                 
                 # 如果最终结果还没有通过流式发送，发送最终输出
@@ -581,6 +578,47 @@ class AgentService:
                     })
         
         return steps
+    
+    def convert_legacy_message_to_chunks(self, message: Dict) -> List[Dict]:
+        """将旧格式消息转换为新的chunks格式
+        
+        Args:
+            message: 旧格式消息对象，包含 content、thinking、intermediate_steps 字段
+            
+        Returns:
+            List[Dict]: MessageChunk列表
+        """
+        chunks = []
+        
+        # 1. 如果有thinking字段，添加ThinkingChunk
+        if message.get('thinking'):
+            chunks.append({
+                "type": "thinking",
+                "content": message['thinking'],
+                "reasoning_step": 1
+            })
+        
+        # 2. 如果有intermediate_steps，添加ToolChunk
+        intermediate_steps = message.get('intermediate_steps', [])
+        for idx, step in enumerate(intermediate_steps):
+            if isinstance(step, dict):
+                chunks.append({
+                    "type": "tool",
+                    "tool_name": step.get('tool', 'unknown'),
+                    "tool_input": step.get('input', ''),
+                    "tool_output": step.get('output', ''),
+                    "status": "completed"
+                })
+        
+        # 3. 主要内容作为TextChunk
+        if message.get('content'):
+            chunks.append({
+                "type": "text",
+                "content": message['content']
+            })
+        
+        logger.debug(f"Converted legacy message to {len(chunks)} chunks")
+        return chunks
 
 
 # 全局实例

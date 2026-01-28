@@ -7,7 +7,7 @@
 
 ## 流式响应类型
 
-### SSE 数据块
+### SSE 数据块 (使用 Discriminated Union)
 
 ```typescript
 /**
@@ -16,38 +16,129 @@
 export type StreamChunkType = 
   | 'conversation_id'  // 会话创建通知
   | 'thinking'         // AI 思考过程
-  | 'tool'             // 工具调用信息
+  | 'tool_call'        // 工具调用请求
+  | 'tool_result'      // 工具调用结果
   | 'content'          // 消息内容片段
   | 'done'             // 流式响应完成
   | 'error'            // 错误信息
 
 /**
- * SSE 数据块（后端流式响应格式）
- * 
- * SSE 格式：data: {JSON}\n\n
+ * SSE 数据块基类型
  */
-export interface SSEChunk {
-  /** 数据块类型 */
-  type: StreamChunkType
-  
-  /** 文本内容（用于 thinking/content 类型） */
-  content?: string
-  
-  /** 会话 ID（用于 conversation_id/done 类型） */
-  conversation_id?: number
-  
-  /** 工具调用信息（用于 tool 类型） */
-  tool_info?: ToolInfo
-  
-  /** 错误消息（用于 error 类型） */
-  message?: string
-  
-  /** 错误代码（可选） */
-  code?: string
+interface SSEChunkBase {
+  /** ISO 8601 格式的时间戳 */
+  timestamp: string
 }
 
 /**
- * 工具调用信息
+ * 会话创建通知块
+ */
+export interface SSEConversationChunk extends SSEChunkBase {
+  type: 'conversation_id'
+  data: {
+    conversation_id: number
+  }
+}
+
+/**
+ * 思考过程块
+ */
+export interface SSEThinkingChunk extends SSEChunkBase {
+  type: 'thinking'
+  data: {
+    thinking: string
+  }
+}
+
+/**
+ * 工具调用请求块
+ */
+export interface SSEToolCallChunk extends SSEChunkBase {
+  type: 'tool_call'
+  data: {
+    tool_name: string
+    tool_input: Record<string, any>
+  }
+}
+
+/**
+ * 工具调用结果块
+ */
+export interface SSEToolResultChunk extends SSEChunkBase {
+  type: 'tool_result'
+  data: {
+    tool_name: string
+    tool_output: any
+  }
+}
+
+/**
+ * 内容片段块
+ */
+export interface SSEContentChunk extends SSEChunkBase {
+  type: 'content'
+  data: {
+    content: string
+  }
+}
+
+/**
+ * 完成通知块
+ */
+export interface SSEDoneChunk extends SSEChunkBase {
+  type: 'done'
+  data: {
+    conversation_id?: number
+    metadata?: {
+      total_tokens?: number
+      completion_tokens?: number
+      prompt_tokens?: number
+    }
+  }
+}
+
+/**
+ * 错误通知块
+ */
+export interface SSEErrorChunk extends SSEChunkBase {
+  type: 'error'
+  data: {
+    message: string
+    code?: string
+    details?: Record<string, any>
+  }
+}
+
+/**
+ * SSE 数据块联合类型 (Discriminated Union)
+ * 
+ * TypeScript 可根据 type 字段自动推断具体类型,提供完整的类型安全
+ * 
+ * 使用示例:
+ * ```typescript
+ * function handleChunk(chunk: SSEChunk) {
+ *   switch (chunk.type) {
+ *     case 'thinking':
+ *       // chunk.data.thinking 自动推断为 string
+ *       console.log(chunk.data.thinking)
+ *       break
+ *     case 'tool_call':
+ *       // chunk.data.tool_name 和 tool_input 可用
+ *       console.log(chunk.data.tool_name, chunk.data.tool_input)
+ *       break
+ *     // ...
+ *   }
+ * }
+ * ```
+ */
+export type SSEChunk =
+  | SSEConversationChunk
+  | SSEThinkingChunk
+  | SSEToolCallChunk
+  | SSEToolResultChunk
+  | SSEContentChunk
+  | SSEDoneChunk
+  | SSEErrorChunk
  */
 export interface ToolInfo {
   /** 工具名称（如 'web_search'、'knowledge_retrieval'） */

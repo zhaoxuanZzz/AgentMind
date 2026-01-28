@@ -84,39 +84,71 @@ class StreamCallbackHandler(AsyncCallbackHandler):
         
         logger.debug(f"Received token: {token[:50]}...")  # 调试日志
         
-        # 累积token到buffer用于分析
+        # 累积token到buffer
         self.buffer += token
         
-        # 检查是否包含"Final Answer:"标记
-        if "Final Answer:" in self.buffer or "final answer:" in self.buffer.lower():
-            if not self.in_final_answer:
-                # 切换到最终答案模式
-                # 提取"Final Answer:"之前的内容作为推理过程
-                parts = self.buffer.split("Final Answer:", 1) if "Final Answer:" in self.buffer else self.buffer.split("final answer:", 1)
-                if len(parts) > 1:
-                    # 发送之前累积的推理内容
-                    thinking_part = parts[0].strip()
-                    if thinking_part:
+        # 检查是否包含Agent思考标记（如 "Thought:", "Action:", "Final Answer:" 等）
+        # 如果包含这些标记，说明是Agent模式，需要区分thinking和content
+        agent_markers = ["Thought:", "Action:", "Action Input:", "Observation:", "Final Answer:"]
+        is_agent_mode = any(marker in self.buffer for marker in agent_markers)
+        
+        if is_agent_mode:
+            # Agent模式：区分thinking和final answer
+            if "Final Answer:" in self.buffer:
+                if not self.in_final_answer:
+                    # 切换到最终答案模式
+                    parts = self.buffer.split("Final Answer:", 1)
+                    if len(parts) > 1:
+                        # 发送之前累积的推理内容
+                        thinking_part = parts[0].strip()
+                        if thinking_part:
+                            self.chunks.append({
+                                "type": "thinking",
+                                "data": {
+                                    "thinking": thinking_part
+                                },
+                                "timestamp": datetime.now().isoformat()
+                            })
+                        # 处理最终答案部分
+                        self.buffer = parts[1]
+                        self.in_final_answer = True
+            
+            # 根据当前模式处理token
+            if self.in_final_answer:
+                # 最终答案模式 - 直接发送内容
+                if self.buffer.strip():
+                    content = self.buffer.strip()
+                    if content:
                         self.chunks.append({
-                            "type": "thinking",
+                            "type": "content",
                             "data": {
-                                "thinking": thinking_part
+                                "content": content
                             },
                             "timestamp": datetime.now().isoformat()
                         })
-                    # 处理最终答案部分
-                    self.buffer = parts[1]
-                    self.in_final_answer = True
-                else:
-                    self.in_final_answer = True
-        
-        # 根据当前模式处理token
-        if self.in_final_answer:
-            # 最终答案模式 - 直接发送内容
-            if self.buffer.strip():
-                # 清理buffer并发送
-                content = self.buffer.replace("Final Answer:", "").replace("final answer:", "").strip()
-                if content:
+                        self.buffer = ""
+            else:
+                # 推理过程模式 - 累积到current_thinking
+                self.current_thinking += token
+                
+                # 定期发送推理内容（每30个字符或遇到换行）
+                if len(self.current_thinking) >= 30 or '\n' in token:
+                    if self.current_thinking.strip():
+                        self.chunks.append({
+                            "type": "thinking",
+                            "data": {
+                                "thinking": self.current_thinking
+                            },
+                            "timestamp": datetime.now().isoformat()
+                        })
+                        self.current_thinking = ""
+        else:
+            # 非Agent模式（直接对话）：所有内容都作为content发送
+            # 每收到一些token就发送，实现真正的流式效果
+            # 降低阈值以实现更实时的流式响应
+            if len(self.buffer) >= 3 or '\n' in token or len(token) > 2:
+                content = self.buffer
+                if content:  # 不要strip，保持原始格式
                     self.chunks.append({
                         "type": "content",
                         "data": {
@@ -124,22 +156,8 @@ class StreamCallbackHandler(AsyncCallbackHandler):
                         },
                         "timestamp": datetime.now().isoformat()
                     })
+                    logger.debug(f"Added content chunk: {content[:30]}...")
                     self.buffer = ""
-        else:
-            # 推理过程模式 - 累积到current_thinking
-            self.current_thinking += token
-            
-            # 定期发送推理内容（每30个字符或遇到换行）
-            if len(self.current_thinking) >= 30 or '\n' in token:
-                if self.current_thinking.strip():
-                    self.chunks.append({
-                        "type": "thinking",
-                        "data": {
-                            "thinking": self.current_thinking
-                        },
-                        "timestamp": datetime.now().isoformat()
-                    })
-                    self.current_thinking = ""
     
     async def on_llm_start(self, serialized, prompts, **kwargs):
         """LLM开始输出时"""
@@ -150,24 +168,17 @@ class StreamCallbackHandler(AsyncCallbackHandler):
     
     async def on_llm_end(self, response, **kwargs):
         """LLM结束输出时，发送剩余的推理内容和最终答案"""
-        logger.debug("LLM ended, flushing remaining content")
+        logger.debug(f"LLM ended, flushing remaining content. Buffer: '{self.buffer[:50]}', chunks count: {len(self.chunks)}")
         
-        # 发送剩余的推理内容
-        if self.current_thinking.strip() and not self.in_final_answer:
-            self.chunks.append({
-                "type": "thinking",
-                "data": {
-                    "thinking": self.current_thinking.strip()
-                },
-                "timestamp": datetime.now().isoformat()
-            })
-            self.current_thinking = ""
-            # 清空buffer，因为current_thinking已经包含了最后一部分未发送的内容
-            self.buffer = ""
-        elif self.buffer.strip():
-            # 如果current_thinking为空，才处理buffer
-            if self.in_final_answer:
-                content = self.buffer.replace("Final Answer:", "").replace("final answer:", "").strip()
+        # 发送剩余的buffer内容
+        if self.buffer:
+            # 检查是否是Agent模式
+            agent_markers = ["Thought:", "Action:", "Action Input:", "Observation:", "Final Answer:"]
+            is_agent_mode = any(marker in self.buffer for marker in agent_markers)
+            
+            if is_agent_mode and self.in_final_answer:
+                # Agent模式的最终答案
+                content = self.buffer
                 if content:
                     self.chunks.append({
                         "type": "content",
@@ -176,7 +187,9 @@ class StreamCallbackHandler(AsyncCallbackHandler):
                         },
                         "timestamp": datetime.now().isoformat()
                     })
-            else:
+                    logger.debug(f"Added final answer chunk: {content[:30]}...")
+            elif is_agent_mode and not self.in_final_answer:
+                # Agent模式的推理过程
                 if self.buffer.strip():
                     self.chunks.append({
                         "type": "thinking",
@@ -185,5 +198,29 @@ class StreamCallbackHandler(AsyncCallbackHandler):
                         },
                         "timestamp": datetime.now().isoformat()
                     })
+            else:
+                # 非Agent模式，作为content发送
+                content = self.buffer
+                if content:
+                    self.chunks.append({
+                        "type": "content",
+                        "data": {
+                            "content": content
+                        },
+                        "timestamp": datetime.now().isoformat()
+                    })
+                    logger.debug(f"Added final content chunk: {content[:30]}...")
+            
             self.buffer = ""
+        
+        # 发送剩余的current_thinking内容（仅Agent模式）
+        if self.current_thinking.strip():
+            self.chunks.append({
+                "type": "thinking",
+                "data": {
+                    "thinking": self.current_thinking.strip()
+                },
+                "timestamp": datetime.now().isoformat()
+            })
+            self.current_thinking = ""
 

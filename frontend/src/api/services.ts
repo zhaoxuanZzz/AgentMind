@@ -11,7 +11,15 @@ import type {
   TaskPlanRequest,
   TaskPlanResponse,
   LLMProvidersResponse,
+  ChatRequestV2,
+  RolePresetV2,
+  RolePresetDetail,
+  ConversationConfig,
+  ConversationConfigUpdate,
+  GlobalSettings,
+  GlobalSettingsUpdate,
 } from './types'
+import type { AnyMessageChunk } from '../types/messageTypes'
 
 // 对话相关API
 export const chatApi = {
@@ -97,6 +105,9 @@ export const chatApi = {
     } catch (error) {
       console.error('Stream reading error:', error)
       throw error
+    } finally {
+      // 确保释放读取器资源
+      reader.releaseLock()
     }
   },
   
@@ -111,6 +122,84 @@ export const chatApi = {
   
   getLLMProviders: () =>
     apiClient.get<any, LLMProvidersResponse>('/chat/llm-providers'),
+  
+  // ===== 新增：Chat v2 流式API =====
+  sendMessageStreamV2: async (
+    data: ChatRequestV2,
+    onChunk: (chunk: AnyMessageChunk) => void
+  ) => {
+    const baseURL = apiClient.defaults?.baseURL || '/api'
+    console.log('Streaming v2 request to:', `${baseURL}/chat/stream-v2`)
+    
+    const response = await fetch(`${baseURL}/chat/stream-v2`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('Stream v2 error:', response.status, errorText)
+      throw new Error(`HTTP error! status: ${response.status}, ${errorText}`)
+    }
+
+    const reader = response.body?.getReader()
+    const decoder = new TextDecoder()
+
+    if (!reader) {
+      throw new Error('No reader available')
+    }
+
+    let buffer = ''
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read()
+        
+        if (done) {
+          console.log('Stream v2 completed')
+          break
+        }
+
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || ''
+
+        for (const line of lines) {
+          if (line.trim() === '') continue
+          
+          if (line.startsWith('data: ')) {
+            try {
+              const jsonStr = line.slice(6).trim()
+              if (jsonStr) {
+                const chunkData = JSON.parse(jsonStr) as AnyMessageChunk
+                console.log('Parsed v2 chunk:', chunkData)
+                onChunk(chunkData)
+              }
+            } catch (e) {
+              console.error('Failed to parse SSE data:', e, 'Line:', line)
+            }
+          } else if (line.trim()) {
+            try {
+              const chunkData = JSON.parse(line.trim()) as AnyMessageChunk
+              console.log('Parsed v2 chunk (no prefix):', chunkData)
+              onChunk(chunkData)
+            } catch (e) {
+              // 忽略解析错误
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Stream v2 reading error:', error)
+      throw error
+    } finally {
+      // 确保释放读取器资源
+      reader.releaseLock()
+    }
+  },
 }
 
 // 知识库相关API
@@ -208,3 +297,38 @@ export const taskApi = {
     apiClient.delete(`/tasks/${id}`),
 }
 
+// ===== 新增：角色预设 v2 API =====
+export const roleApi = {
+  // 获取所有角色预设列表
+  getRoles: async (): Promise<RolePresetV2[]> => {
+    const response = await apiClient.get<any, { roles: RolePresetV2[] }>('/roles')
+    return response.roles || []
+  },
+  
+  // 获取特定角色详情
+  getRole: (roleId: string) =>
+    apiClient.get<any, RolePresetDetail>(`/roles/${roleId}`),
+}
+
+// ===== 新增：会话配置和全局设置 API =====
+export const configApi = {
+  // 获取全局设置
+  getGlobalSettings: () =>
+    apiClient.get<any, GlobalSettings>('/settings/global'),
+  
+  // 更新全局设置
+  updateGlobalSettings: (data: GlobalSettingsUpdate) =>
+    apiClient.put<any, GlobalSettings>('/settings/global', data),
+  
+  // 获取会话配置
+  getConversationConfig: (conversationId: number) =>
+    apiClient.get<any, ConversationConfig>(`/conversations/${conversationId}/config`),
+  
+  // 更新会话配置
+  updateConversationConfig: (conversationId: number, data: ConversationConfigUpdate) =>
+    apiClient.put<any, ConversationConfig>(`/conversations/${conversationId}/config`, data),
+  
+  // 删除会话配置（恢复使用全局默认）
+  deleteConversationConfig: (conversationId: number) =>
+    apiClient.delete(`/conversations/${conversationId}/config`),
+}

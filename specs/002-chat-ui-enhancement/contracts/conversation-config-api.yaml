@@ -1,0 +1,292 @@
+openapi: 3.0.3
+info:
+  title: Conversation Config API
+  description: 会话配置和全局设置API
+  version: 1.0.0
+
+paths:
+  /api/settings/global:
+    get:
+      summary: 获取全局设置
+      description: 获取当前用户的全局默认设置
+      operationId: getGlobalSettings
+      tags:
+        - Settings
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GlobalSettingsResponse'
+              example:
+                default_role_id: "software_engineer"
+                default_role_name: "软件工程师"
+                default_plan_mode: false
+
+    put:
+      summary: 更新全局设置
+      description: 更新当前用户的全局默认设置
+      operationId: updateGlobalSettings
+      tags:
+        - Settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GlobalSettingsUpdateRequest'
+            example:
+              default_role_id: "product_manager"
+              default_plan_mode: true
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GlobalSettingsResponse'
+              example:
+                default_role_id: "product_manager"
+                default_role_name: "产品经理"
+                default_plan_mode: true
+        '400':
+          description: 请求参数错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                detail: "Invalid role_id: invalid_role"
+
+  /api/conversations/{conversation_id}/config:
+    get:
+      summary: 获取会话配置
+      description: 获取指定会话的配置，如果会话没有特定配置，返回全局默认设置
+      operationId: getConversationConfig
+      tags:
+        - Conversations
+      parameters:
+        - name: conversation_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: 会话ID
+          example: 123
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationConfigResponse'
+              examples:
+                with_override:
+                  summary: 会话有自定义配置
+                  value:
+                    conversation_id: 123
+                    role_id: "translator"
+                    role_name: "翻译专家"
+                    plan_mode_enabled: true
+                    is_override: true
+                using_global:
+                  summary: 使用全局默认配置
+                  value:
+                    conversation_id: 123
+                    role_id: "software_engineer"
+                    role_name: "软件工程师"
+                    plan_mode_enabled: false
+                    is_override: false
+        '404':
+          description: 会话不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                detail: "Conversation not found"
+
+    put:
+      summary: 更新会话配置
+      description: 更新指定会话的配置，设置为null表示使用全局默认
+      operationId: updateConversationConfig
+      tags:
+        - Conversations
+      parameters:
+        - name: conversation_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: 会话ID
+          example: 123
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConversationConfigUpdateRequest'
+            examples:
+              set_role:
+                summary: 设置特定角色
+                value:
+                  role_id: "translator"
+                  plan_mode_enabled: true
+              use_global:
+                summary: 恢复使用全局默认
+                value:
+                  role_id: null
+                  plan_mode_enabled: null
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationConfigResponse'
+              example:
+                conversation_id: 123
+                role_id: "translator"
+                role_name: "翻译专家"
+                plan_mode_enabled: true
+                is_override: true
+        '400':
+          description: 请求参数错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 会话不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      summary: 删除会话配置
+      description: 删除会话的自定义配置，恢复使用全局默认
+      operationId: deleteConversationConfig
+      tags:
+        - Conversations
+      parameters:
+        - name: conversation_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: 会话ID
+          example: 123
+      responses:
+        '204':
+          description: 成功删除
+        '404':
+          description: 会话不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    GlobalSettingsResponse:
+      type: object
+      required:
+        - default_role_id
+        - default_role_name
+        - default_plan_mode
+      properties:
+        default_role_id:
+          type: string
+          description: 默认角色ID
+          example: "software_engineer"
+        default_role_name:
+          type: string
+          description: 默认角色名称
+          example: "软件工程师"
+        default_plan_mode:
+          type: boolean
+          description: 默认计划模式
+          example: false
+
+    GlobalSettingsUpdateRequest:
+      type: object
+      properties:
+        default_role_id:
+          type: string
+          nullable: true
+          description: 默认角色ID
+          enum:
+            - software_engineer
+            - product_manager
+            - marketing
+            - translator
+            - research_assistant
+          example: "software_engineer"
+        default_plan_mode:
+          type: boolean
+          nullable: true
+          description: 默认计划模式
+          example: false
+
+    ConversationConfigResponse:
+      type: object
+      required:
+        - conversation_id
+        - role_id
+        - role_name
+        - plan_mode_enabled
+        - is_override
+      properties:
+        conversation_id:
+          type: integer
+          description: 会话ID
+          example: 123
+        role_id:
+          type: string
+          description: 当前有效的角色ID（可能来自会话配置或全局默认）
+          example: "software_engineer"
+        role_name:
+          type: string
+          description: 当前有效的角色名称
+          example: "软件工程师"
+        plan_mode_enabled:
+          type: boolean
+          description: 当前有效的计划模式设置
+          example: false
+        is_override:
+          type: boolean
+          description: 是否覆盖了全局设置（true=会话有自定义配置，false=使用全局默认）
+          example: false
+
+    ConversationConfigUpdateRequest:
+      type: object
+      properties:
+        role_id:
+          type: string
+          nullable: true
+          description: 角色ID，null表示使用全局默认
+          enum:
+            - software_engineer
+            - product_manager
+            - marketing
+            - translator
+            - research_assistant
+            - null
+          example: "translator"
+        plan_mode_enabled:
+          type: boolean
+          nullable: true
+          description: 计划模式，null表示使用全局默认
+          example: true
+
+    ErrorResponse:
+      type: object
+      required:
+        - detail
+      properties:
+        detail:
+          type: string
+          description: 错误详情
+          example: "Invalid request"

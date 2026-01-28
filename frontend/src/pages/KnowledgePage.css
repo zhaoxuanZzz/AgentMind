@@ -349,7 +349,7 @@
 }
 
 .knowledge-container .ant-table-thead > tr > th {
-  background: rgba(255, 255, 255, 0.05) !important;
+  background: rgba(245, 247, 250, 0.8) !important;
   color: var(--agent-text-color) !important;
   border-bottom: 1px solid var(--agent-glass-border) !important;
 }
@@ -360,7 +360,7 @@
 }
 
 .knowledge-container .ant-table-tbody > tr:hover > td {
-  background: rgba(255, 255, 255, 0.05) !important;
+  background: rgba(245, 247, 250, 0.6) !important;
 }
 
 .knowledge-container .ant-pagination-item a {

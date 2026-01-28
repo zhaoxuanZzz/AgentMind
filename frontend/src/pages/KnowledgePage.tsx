@@ -1286,8 +1286,8 @@ ${currentContent}
                 创建
               </Button>
               <Button onClick={() => {
-                setCardCreateModalVisible(false)
-                cardForm.resetFields()
+                setPresetCreateModalVisible(false)
+                presetForm.resetFields()
                 setOriginalContent('')
                 setOptimizedContent('')
                 setOptimizeRequirement('')
@@ -1559,9 +1559,9 @@ ${currentContent}
                 保存
               </Button>
               <Button onClick={() => {
-                setCardEditModalVisible(false)
-                setSelectedCard(null)
-                cardForm.resetFields()
+                setPresetEditModalVisible(false)
+                setSelectedPreset(null)
+                presetForm.resetFields()
                 setOriginalContent('')
                 setOptimizedContent('')
                 setOptimizeRequirement('')
